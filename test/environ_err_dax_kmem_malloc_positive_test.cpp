@@ -59,16 +59,13 @@ int main()
         printf("Error: allocation failed\n");
         goto exit;
     }
-
-    sprintf(static_cast<char *>(ptr), "abc");
+    memset(ptr, 'A', KB/2);
 
     all_dax_kmem_nodes_nodemask = numa_parse_nodestring(env_value_str);
-
-    for (unsigned i = 0; i < numa_count; ++i) {
+    for (unsigned i = 0; i <= numa_count; ++i) {
         int min_distance = INT_MAX;
-        int distance_to_i_node;
         if (numa_bitmask_isbitset(all_dax_kmem_nodes_nodemask, i)) {
-            distance_to_i_node = numa_distance(process_node, i);
+            int distance_to_i_node = numa_distance(process_node, i);
             if (distance_to_i_node < min_distance) {
                 min_distance = distance_to_i_node;
                 closest_numa_ids.clear();

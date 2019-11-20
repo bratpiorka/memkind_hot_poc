@@ -61,9 +61,7 @@ class Test_dax_kmem_env_var(object):
 
     def test_TC_MEMKIND_dax_kmem_env_var_proper_memkind_malloc(self):
         """ This test checks if allocation is performed on persistent memory correctly """
-        dax_kmem_nodemask_default = self.get_dax_kmem_nodes()
-        print("dax_kmem_nodemask_default = " + dax_kmem_nodemask_default)
-        print("ENV VAR=" + "MEMKIND_DAX_KMEM_NODES={} ".format(dax_kmem_nodemask_default)
+        dax_kmem_nodemask_default = self.get_dax_kmem_nodes().strip()
         command = "MEMKIND_DAX_KMEM_NODES={} ".format(dax_kmem_nodemask_default) + self.cmd_helper.get_command_path(self.environ_err_positive_test)
         output, retcode = self.cmd_helper.execute_cmd(command, sudo=False)
         assert retcode == 0, self.fail_msg.format("\nError: Execution of: \'{0}\' returns: {1} \noutput: {2}".format(command, retcode, output))
