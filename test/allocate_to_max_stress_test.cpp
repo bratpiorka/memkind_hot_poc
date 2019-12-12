@@ -174,3 +174,21 @@ TEST_F(AllocateToMaxStressTests,
     kinds.enable_type(AllocatorTypes::MEMKIND_HBW_PREFERRED_HUGETLB);
     run(kinds, TypesConf(FunctionCalls::MALLOC), 2048, MB, MB, 2*GB, true);
 }
+
+TEST_F(AllocateToMaxStressTests,
+       test_TC_MEMKIND_slts_ALLOCATE_TO_MAX_DIFFERENT_DAX_KMEM_KINDS)
+{
+    TypesConf kinds;
+    //kinds.enable_type(AllocatorTypes::MEMKIND_DEFAULT);
+    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM);
+    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_ALL);
+    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
+    TypesConf func_calls;
+    func_calls.enable_type(FunctionCalls::MALLOC);
+    //func_calls.enable_type(FunctionCalls::CALLOC);
+    //func_calls.enable_type(FunctionCalls::REALLOC);
+    //func_calls.enable_type(FunctionCalls::FREE);
+    unsigned long long min_alloc_size = MB;
+    unsigned long long max_allocated_memory = 9*GB;
+    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, MB, max_allocated_memory, true);
+}

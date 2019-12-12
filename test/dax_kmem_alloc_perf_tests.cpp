@@ -30,7 +30,7 @@
 #include "allocator_perf_tool/TimerSysTime.hpp"
 #include "allocator_perf_tool/GTestAdapter.hpp"
 #include "allocator_perf_tool/VectorIterator.hpp"
-#include "allocator_perf_tool/AllocationSizes.hpp"
+//#include "allocator_perf_tool/AllocationSizes.hpp"
 
 class DaxKmemAllocPerformanceTests: public :: testing::Test,
     public ::testing::WithParamInterface<memkind_t>
@@ -56,17 +56,17 @@ INSTANTIATE_TEST_CASE_P(
 TEST_P(DaxKmemAllocPerformanceTests, test_TC_MEMKIND_MEMKIND_DAX_KMEM_malloc)
 {
     void *ptr;
-    //const size_t alloc_size = 1 * MB;
-    int seed = time(nullptr);
-    VectorIterator<size_t> allocation_sizes =
-        AllocationSizes::generate_random_sizes(10, 32, 1 * MB, seed);
+    const size_t alloc_size = 1 * MB;
+    //int seed = time(nullptr);
+//    VectorIterator<size_t> allocation_sizes =
+//        AllocationSizes::generate_random_sizes(10, 32, 1 * MB, seed);
     std::vector<void *> pointers_vec;
     //const unsigned allocations = 10000;
     TimerSysTime timer;
     std::vector<double> times_vec;
     //size_t numa_size;
     //int numa_id = -1;
-    size_t alloc_size;
+    //size_t alloc_size;
 
     ptr = memkind_malloc(kind, alloc_size);
     ASSERT_NE(nullptr, ptr);
@@ -76,10 +76,10 @@ TEST_P(DaxKmemAllocPerformanceTests, test_TC_MEMKIND_MEMKIND_DAX_KMEM_malloc)
     //numa_size = numa_node_size64(numa_id, nullptr);
 
     timer.start();
-    alloc_size = allocation_sizes. rand() % allocation_sizes.size();
+    //alloc_size = allocation_sizes. rand() % allocation_sizes.size();
     //while (0.98 * numa_size > alloc_size * pointers_vec.size()) {
     while (9 * GB > alloc_size * pointers_vec.size()) {
-        alloc_size =
+        //alloc_size =
         ptr = memkind_malloc(kind, alloc_size);
         ASSERT_NE(nullptr, ptr);
         memset(ptr, 'a', alloc_size);
