@@ -185,9 +185,9 @@ TEST_F(AllocateToMaxStressTests,
     kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
     TypesConf func_calls;
     func_calls.enable_type(FunctionCalls::MALLOC);
-    //func_calls.enable_type(FunctionCalls::CALLOC);
-    //func_calls.enable_type(FunctionCalls::REALLOC);
-    //func_calls.enable_type(FunctionCalls::FREE);
+    func_calls.enable_type(FunctionCalls::CALLOC);
+    func_calls.enable_type(FunctionCalls::REALLOC);
+    func_calls.enable_type(FunctionCalls::FREE);
     unsigned long long min_alloc_size = MB;
     unsigned long long max_allocated_memory = 9*GB;
     run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, MB, max_allocated_memory, true);
