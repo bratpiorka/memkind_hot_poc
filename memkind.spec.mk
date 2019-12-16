@@ -187,7 +187,7 @@ ${memkind_test_dir}/environ_err_dax_kmem_malloc_positive_test
 ${memkind_test_dir}/environ_err_dax_kmem_malloc_test
 $(memkind_test_dir)/environ_err_hbw_malloc_test
 ${memkind_test_dir}/dax_kmem_test
-${memkind_test_dir}/dax_kmem_alloc_perf_test
+${memkind_test_dir}/dax_kmem_perf_test
 $(memkind_test_dir)/decorator_test
 $(memkind_test_dir)/locality_test
 $(memkind_test_dir)/freeing_memory_segfault_test

@@ -690,6 +690,8 @@ test/allocator_perf_tool/StandardAllocatorWithTimer.hpp
 test/allocator_perf_tool/Stats.hpp
 test/allocator_perf_tool/StressIncreaseToMax.cpp
 test/allocator_perf_tool/StressIncreaseToMax.h
+test/allocator_perf_tool/StressIncreaseToMaxDaxKmem.cpp
+test/allocator_perf_tool/StressIncreaseToMaxDaxKmem.h
 test/allocator_perf_tool/Task.hpp
 test/allocator_perf_tool/TaskFactory.hpp
 test/allocator_perf_tool/Tests.hpp
@@ -711,6 +713,7 @@ test/common.h
 test/dax_kmem_alloc_perf_tests.cpp
 test/dax_kmem_alloc_performance_tests.cpp
 test/dax_kmem_env_var_test.py
+test/dax_kmem_perf_test.cpp
 test/dax_kmem_test
 test/decorator_test
 test/decorator_test.cpp

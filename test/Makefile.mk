@@ -28,7 +28,6 @@ check_PROGRAMS += test/all_tests \
                   test/allocator_perf_tool_tests \
                   test/autohbw_test_helper \
                   test/dax_kmem_test \
-                  test/dax_kmem_alloc_perf_test \
                   test/decorator_test \
                   test/environ_err_dax_kmem_malloc_test \
                   test/environ_err_dax_kmem_malloc_positive_test \
@@ -70,7 +69,7 @@ test_all_tests_LDADD = libmemkind.la
 test_allocator_perf_tool_tests_LDADD = libmemkind.la
 test_autohbw_test_helper_LDADD = libmemkind.la
 test_dax_kmem_test_LDADD = libmemkind.la
-test_dax_kmem_alloc_perf_test_LDADD = libmemkind.la
+#test_dax_kmem_perf_test_LDADD = libmemkind.la
 test_decorator_test_LDADD = libmemkind.la
 test_environ_err_hbw_malloc_test_LDADD = libmemkind.la
 test_environ_err_dax_kmem_malloc_test_LDADD = libmemkind.la
@@ -134,7 +133,7 @@ test_locality_test_CXXFLAGS = $(OPENMP_CFLAGS) -O0 -Wno-error $(AM_CPPFLAGS)
 test_autohbw_test_helper_SOURCES = test/autohbw_test_helper.c
 test_decorator_test_SOURCES = $(fused_gtest) test/decorator_test.cpp test/decorator_test.h
 test_dax_kmem_test_SOURCES = $(fused_gtest) test/memkind_dax_kmem_test.cpp
-test_dax_kmem_alloc_perf_test_SOURCES = $(fused_gtest) test/dax_kmem_alloc_perf_tests.cpp
+#test_dax_kmem_perf_test_SOURCES = $(fused_gtest) test/dax_kmem_perf_test.cpp
 test_environ_err_hbw_malloc_test_SOURCES = test/environ_err_hbw_malloc_test.cpp
 test_environ_err_dax_kmem_malloc_test_SOURCES = test/environ_err_dax_kmem_malloc_test.cpp
 test_environ_err_dax_kmem_malloc_positive_test_SOURCES = test/environ_err_dax_kmem_malloc_positive_test.cpp
@@ -173,6 +172,8 @@ allocator_perf_tool_library_sources = test/allocator_perf_tool/AllocationSizes.h
                                       test/allocator_perf_tool/Stats.hpp \
                                       test/allocator_perf_tool/StressIncreaseToMax.cpp \
                                       test/allocator_perf_tool/StressIncreaseToMax.h \
+                                      test/allocator_perf_tool/StressIncreaseToMaxDaxKmem.cpp \
+                                      test/allocator_perf_tool/StressIncreaseToMaxDaxKmem.h \
                                       test/allocator_perf_tool/Task.hpp \
                                       test/allocator_perf_tool/TaskFactory.hpp \
                                       test/allocator_perf_tool/Tests.hpp \
@@ -196,6 +197,7 @@ test_allocator_perf_tool_tests_SOURCES = $(allocator_perf_tool_library_sources) 
                                          test/huge_page_test.cpp \
                                          test/memory_footprint_test.cpp \
                                          test/pmem_alloc_performance_tests.cpp \
+                                         test/dax_kmem_perf_test.cpp \
                                          # end
 
 
