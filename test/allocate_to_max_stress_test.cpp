@@ -181,8 +181,8 @@ TEST_F(AllocateToMaxStressTests,
     TypesConf kinds;
     //kinds.enable_type(AllocatorTypes::MEMKIND_DEFAULT);
     kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM);
-    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_ALL);
-    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
+    //kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_ALL);
+    //kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
     TypesConf func_calls;
     func_calls.enable_type(FunctionCalls::MALLOC);
     func_calls.enable_type(FunctionCalls::CALLOC);
