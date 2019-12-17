@@ -61,7 +61,6 @@ void StressIncreaseToMax::run()
     size_t requested_memory = 0;
     bool has_reach_memory_request_limit = false;
 
-    printf("Start scenarios");
     while (!has_reach_memory_request_limit &&
            !test_status.is_allocation_error &&
            (test_status.has_next_memory_operation = scenario_workload.run())) {
@@ -106,7 +105,7 @@ std::vector<iteration_result> StressIncreaseToMax::execute_test_iterations(
 
     timer.start();
 
-    //while (timer.getElapsedTime() < time) {
+    while (timer.getElapsedTime() < time) {
         StressIncreaseToMax stress_test(task_conf, requested_memory_limit);
         stress_test.run();
         float elapsed_time = timer.getElapsedTime();
@@ -117,18 +116,18 @@ std::vector<iteration_result> StressIncreaseToMax::execute_test_iterations(
         results.push_back(stress_test.get_test_status());
 
         //Log every iteration of StressIncreaseToMax test.
-        csv::Row data_row;
-        data_row.append(itr);
-        data_row.append(convert_bytes_to_mb(stats.get_allocated()));
-        data_row.append(elapsed_time);
+        csv::Row row;
+        row.append(itr);
+        row.append(convert_bytes_to_mb(stats.get_allocated()));
+        row.append(elapsed_time);
         if(task_conf.is_csv_log_enabled) {
-            csv_file << data_row.export_row();
+            csv_file << row.export_row();
         }
-        printf("%s", data_row.export_row().c_str());
+        printf("%s", row.export_row().c_str());
         fflush(stdout);
 
         itr++;
-    //}
+    }
 
     printf("\nStress test (StressIncreaseToMax) finish in time %f.\n",
            timer.getElapsedTime());
