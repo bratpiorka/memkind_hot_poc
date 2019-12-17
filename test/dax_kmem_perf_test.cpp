@@ -97,13 +97,40 @@ protected:
 
 
 TEST_F(AllocateToMaxStressDaxKmemTests,
-       test_TC_MEMKIND_slts_ALLOCATE_TO_MAX_DIFFERENT_DAX_KMEM_KINDS)
+       test_TC_MEMKIND_DAX_KMEM_malloc_calloc_realloc_free_max_memory_dax_kmem)
 {
     TypesConf kinds;
-    //kinds.enable_type(AllocatorTypes::MEMKIND_DEFAULT);
     kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM);
-    //kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_ALL);
-    //kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
+    TypesConf func_calls;
+    func_calls.enable_type(FunctionCalls::MALLOC);
+    func_calls.enable_type(FunctionCalls::CALLOC);
+    func_calls.enable_type(FunctionCalls::REALLOC);
+    func_calls.enable_type(FunctionCalls::FREE);
+    unsigned long long min_alloc_size = MB;
+    unsigned long long max_allocated_memory = 9*GB;
+    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, MB, max_allocated_memory, true);
+}
+
+TEST_F(AllocateToMaxStressDaxKmemTests,
+       test_TC_MEMKIND_DAX_KMEM_malloc_calloc_realloc_free_max_memory_dax_kmem_all)
+{
+    TypesConf kinds;
+    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_ALL);
+    TypesConf func_calls;
+    func_calls.enable_type(FunctionCalls::MALLOC);
+    func_calls.enable_type(FunctionCalls::CALLOC);
+    func_calls.enable_type(FunctionCalls::REALLOC);
+    func_calls.enable_type(FunctionCalls::FREE);
+    unsigned long long min_alloc_size = MB;
+    unsigned long long max_allocated_memory = 9*GB;
+    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, MB, max_allocated_memory, true);
+}
+
+TEST_F(AllocateToMaxStressDaxKmemTests,
+       test_TC_MEMKIND_DAX_KMEM_malloc_calloc_realloc_free_max_memory_dax_kmem_preferred)
+{
+    TypesConf kinds;
+    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
     TypesConf func_calls;
     func_calls.enable_type(FunctionCalls::MALLOC);
     func_calls.enable_type(FunctionCalls::CALLOC);
