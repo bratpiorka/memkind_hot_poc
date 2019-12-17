@@ -23,18 +23,22 @@
  */
 
 #include <chrono>
+
 #include "common.h"
 #include "allocator_perf_tool/Configuration.hpp"
 #include "allocator_perf_tool/StressIncreaseToMaxDaxKmem.h"
 #include "allocator_perf_tool/HugePageOrganizer.hpp"
 
 //memkind stress and longevity tests using Allocatr Perf Tool.
-class AllocateToMaxStressDaxKmemTests: public :: testing::Test
+class MemkindDaxKmemPerfTestsParam: public ::testing::Test,
+    public ::testing::WithParamInterface<unsigned>
 {
-
 protected:
+    unsigned kind;
     void SetUp()
-    {}
+    {
+        kind = GetParam();
+    }
 
     void TearDown()
     {}
@@ -95,42 +99,16 @@ protected:
     }
 };
 
+INSTANTIATE_TEST_CASE_P(
+    KindParam, MemkindDaxKmemPerfTestsParam,
+    ::testing::Values(AllocatorTypes::MEMKIND_DAX_KMEM, AllocatorTypes::MEMKIND_DAX_KMEM_ALL,
+                      AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED));
 
-TEST_F(AllocateToMaxStressDaxKmemTests,
+TEST_P(MemkindDaxKmemPerfTestsParam,
        test_TC_MEMKIND_DAX_KMEM_malloc_calloc_realloc_free_max_memory_dax_kmem)
 {
     TypesConf kinds;
-    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM);
-    TypesConf func_calls;
-    func_calls.enable_type(FunctionCalls::MALLOC);
-    func_calls.enable_type(FunctionCalls::CALLOC);
-    func_calls.enable_type(FunctionCalls::REALLOC);
-    func_calls.enable_type(FunctionCalls::FREE);
-    unsigned long long min_alloc_size = MB;
-    unsigned long long max_allocated_memory = 9*GB;
-    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, MB, max_allocated_memory, true);
-}
-
-TEST_F(AllocateToMaxStressDaxKmemTests,
-       test_TC_MEMKIND_DAX_KMEM_malloc_calloc_realloc_free_max_memory_dax_kmem_all)
-{
-    TypesConf kinds;
-    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_ALL);
-    TypesConf func_calls;
-    func_calls.enable_type(FunctionCalls::MALLOC);
-    func_calls.enable_type(FunctionCalls::CALLOC);
-    func_calls.enable_type(FunctionCalls::REALLOC);
-    func_calls.enable_type(FunctionCalls::FREE);
-    unsigned long long min_alloc_size = MB;
-    unsigned long long max_allocated_memory = 9*GB;
-    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, MB, max_allocated_memory, true);
-}
-
-TEST_F(AllocateToMaxStressDaxKmemTests,
-       test_TC_MEMKIND_DAX_KMEM_malloc_calloc_realloc_free_max_memory_dax_kmem_preferred)
-{
-    TypesConf kinds;
-    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
+    kinds.enable_type(kind);
     TypesConf func_calls;
     func_calls.enable_type(FunctionCalls::MALLOC);
     func_calls.enable_type(FunctionCalls::CALLOC);
