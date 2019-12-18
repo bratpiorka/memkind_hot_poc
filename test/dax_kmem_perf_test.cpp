@@ -23,11 +23,50 @@
  */
 
 #include <chrono>
+#include <numa.h>
+#include <set>
+#include <sched.h>
 
 #include "common.h"
 #include "allocator_perf_tool/Configuration.hpp"
 #include "allocator_perf_tool/StressIncreaseToMaxDaxKmem.h"
 #include "allocator_perf_tool/HugePageOrganizer.hpp"
+
+static std::set<int> get_dax_kmem_nodes(void)
+{
+    struct bitmask *cpu_mask = numa_allocate_cpumask();
+    std::set<int> dax_kmem_nodes;
+    long long free_space;
+    const int MAXNODE_ID = numa_num_configured_nodes();
+    for (int id = 0; id < MAXNODE_ID; ++id) {
+        numa_node_to_cpus(id, cpu_mask);
+        // Check if numa node exists and if it is NUMA node created from persistent memory
+        if (numa_node_size64(id, &free_space) > 0 &&
+            numa_bitmask_weight(cpu_mask) == 0) {
+            dax_kmem_nodes.insert(id);
+        }
+    }
+    numa_free_cpumask(cpu_mask);
+    return dax_kmem_nodes;
+}
+
+static std::set<int> get_closest_dax_kmem_numa_nodes(int regular_node)
+{
+    int min_distance = INT_MAX;
+    std::set<int> closest_numa_ids;
+    std::set<int> dax_kmem_nodes = get_dax_kmem_nodes();
+    for (auto const &node: dax_kmem_nodes) {
+        int distance_to_i_node = numa_distance(regular_node, node);
+        if (distance_to_i_node < min_distance) {
+            min_distance = distance_to_i_node;
+            closest_numa_ids.clear();
+            closest_numa_ids.insert(node);
+        } else if (distance_to_i_node == min_distance) {
+            closest_numa_ids.insert(node);
+        }
+    }
+    return closest_numa_ids;
+}
 
 //memkind stress and longevity tests using Allocatr Perf Tool.
 class MemkindDaxKmemPerfTestsParam: public ::testing::Test,
@@ -105,7 +144,7 @@ INSTANTIATE_TEST_CASE_P(
                       AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED));
 
 TEST_P(MemkindDaxKmemPerfTestsParam,
-       test_TC_MEMKIND_DAX_KMEM_malloc_calloc_realloc_free_max_memory_dax_kmem)
+       test_TC_MEMKIND_DAX_KMEM_malloc_calloc_realloc_free_max_memory)
 {
     TypesConf kinds;
     kinds.enable_type(kind);
@@ -114,7 +153,16 @@ TEST_P(MemkindDaxKmemPerfTestsParam,
     func_calls.enable_type(FunctionCalls::CALLOC);
     func_calls.enable_type(FunctionCalls::REALLOC);
     func_calls.enable_type(FunctionCalls::FREE);
-    unsigned long long min_alloc_size = MB;
-    unsigned long long max_allocated_memory = 9*GB;
-    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, MB, max_allocated_memory, true);
+
+    long long free_space;
+    int process_cpu = sched_getcpu();
+    int process_node = numa_node_of_cpu(process_cpu);
+    std::set<int> closest_dax_kmem_nodes = get_closest_dax_kmem_numa_nodes(process_cpu);
+    int closest_dax_kmem_node = *closest_dax_kmem_nodes.begin();
+    numa_node_size64(closest_dax_kmem_node, &free_space);
+    unsigned long long min_alloc_size = 1 * KB;
+    unsigned long long max_alloc_size = 1 * MB;
+    unsigned long long max_allocated_memory = 0.99 * free_space;
+
+    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
 }
