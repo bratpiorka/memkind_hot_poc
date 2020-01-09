@@ -132,7 +132,7 @@ test_locality_test_CXXFLAGS = $(OPENMP_CFLAGS) -O0 -Wno-error $(AM_CPPFLAGS)
 
 test_autohbw_test_helper_SOURCES = test/autohbw_test_helper.c
 test_decorator_test_SOURCES = $(fused_gtest) test/decorator_test.cpp test/decorator_test.h
-test_dax_kmem_test_SOURCES = $(fused_gtest) test/memkind_dax_kmem_test.cpp
+#test_dax_kmem_test_SOURCES = $(fused_gtest) test/memkind_dax_kmem_test.cpp
 #test_dax_kmem_perf_test_SOURCES = $(fused_gtest) test/dax_kmem_perf_test.cpp
 test_dax_kmem_test_SOURCES = $(fused_gtest) test/dax_kmem_api.h test/dax_kmem_api.cpp test/memkind_dax_kmem_test.cpp
 test_environ_err_hbw_malloc_test_SOURCES = test/environ_err_hbw_malloc_test.cpp
@@ -198,7 +198,7 @@ test_allocator_perf_tool_tests_SOURCES = $(allocator_perf_tool_library_sources) 
                                          test/huge_page_test.cpp \
                                          test/memory_footprint_test.cpp \
                                          test/pmem_alloc_performance_tests.cpp \
-                                         test/dax_kmem_perf_test.cpp \
+                                         test/dax_kmem_api.h test/dax_kmem_api.cpp test/dax_kmem_perf_test.cpp \
                                          # end
 
 
