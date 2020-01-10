@@ -67,6 +67,8 @@ bool ScenarioWorkload::run()
                     memory_operation free_op = *data;
                     free_op.allocation_method = FunctionCalls::FREE;
                     allocations.push_back(free_op);
+                } else {
+                    return false;
                 }
 
                 break;
@@ -104,9 +106,7 @@ memory_operation *ScenarioWorkload::get_allocated_memory()
 
 void ScenarioWorkload::post_allocation_check(const memory_operation &data)
 {
-    printf("allocations size: %d\n", allocations.size());
     allocations.push_back(data);
-    printf("allocations size: %d\n", allocations.size());
     if(touch_memory_on_allocation && (data.ptr != NULL) &&
        (data.error_code != ENOMEM)) {
         //Write memory to ensure physical allocation.
