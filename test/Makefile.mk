@@ -28,6 +28,7 @@ check_PROGRAMS += test/all_tests \
                   test/allocator_perf_tool_tests \
                   test/autohbw_test_helper \
                   test/dax_kmem_test \
+                  test/dax_kmem_perf_test \
                   test/decorator_test \
                   test/environ_err_dax_kmem_malloc_test \
                   test/environ_err_dax_kmem_malloc_positive_test \
@@ -69,7 +70,7 @@ test_all_tests_LDADD = libmemkind.la
 test_allocator_perf_tool_tests_LDADD = libmemkind.la
 test_autohbw_test_helper_LDADD = libmemkind.la
 test_dax_kmem_test_LDADD = libmemkind.la
-#test_dax_kmem_perf_test_LDADD = libmemkind.la
+test_dax_kmem_perf_test_LDADD = libmemkind.la
 test_decorator_test_LDADD = libmemkind.la
 test_environ_err_hbw_malloc_test_LDADD = libmemkind.la
 test_environ_err_dax_kmem_malloc_test_LDADD = libmemkind.la
@@ -188,6 +189,17 @@ allocator_perf_tool_library_sources = test/allocator_perf_tool/AllocationSizes.h
                                       # end
 
 
+test_dax_kmem_perf_test_SOURCES = $(allocator_perf_tool_library_sources) \
+                                 $(fused_gtest) \
+                                 test/dax_kmem_perf_test.cpp \
+                                 # end
+
+
+test_dax_kmem_perf_test_CPPFLAGS = -Itest/allocator_perf_tool/ -O0 -Wno-error $(AM_CPPFLAGS)
+test_dax_kmem_perf_test_CXXFLAGS = -Itest/allocator_perf_tool/ -O0 -Wno-error $(AM_CPPFLAGS)
+test_dax_kmem_perf_test_LDFLAGS = -lpthread -lnuma
+
+
 test_allocator_perf_tool_tests_SOURCES = $(allocator_perf_tool_library_sources) \
                                          $(fused_gtest) \
                                          test/alloc_performance_tests.cpp \
@@ -197,7 +209,6 @@ test_allocator_perf_tool_tests_SOURCES = $(allocator_perf_tool_library_sources) 
                                          test/huge_page_test.cpp \
                                          test/memory_footprint_test.cpp \
                                          test/pmem_alloc_performance_tests.cpp \
-                                         test/dax_kmem_perf_test.cpp \
                                          # end
 
 
