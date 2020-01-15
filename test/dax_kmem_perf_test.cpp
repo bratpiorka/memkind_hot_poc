@@ -157,6 +157,7 @@ TEST_F(MemkindDaxKmemPerfTests,
     unsigned long long max_allocated_memory = 0.99 * free_space;
 
     run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
+    //sleep(2);
 }
 
 TEST_F(MemkindDaxKmemPerfTests,
@@ -183,89 +184,89 @@ TEST_F(MemkindDaxKmemPerfTests,
     run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
 }
 
-TEST_F(MemkindDaxKmemPerfTests,
-       test_TC_MEMKIND_DAX_KMEM_PREFERRED_malloc_calloc_realloc_free_max_memory)
-{
-    TypesConf kinds;
-    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
-    TypesConf func_calls;
-    func_calls.enable_type(FunctionCalls::MALLOC);
-    func_calls.enable_type(FunctionCalls::CALLOC);
-    func_calls.enable_type(FunctionCalls::REALLOC);
-    func_calls.enable_type(FunctionCalls::FREE);
+//TEST_F(MemkindDaxKmemPerfTests,
+//       test_TC_MEMKIND_DAX_KMEM_PREFERRED_malloc_calloc_realloc_free_max_memory)
+//{
+//    TypesConf kinds;
+//    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
+//    TypesConf func_calls;
+//    func_calls.enable_type(FunctionCalls::MALLOC);
+//    func_calls.enable_type(FunctionCalls::CALLOC);
+//    func_calls.enable_type(FunctionCalls::REALLOC);
+//    func_calls.enable_type(FunctionCalls::FREE);
 
-    long long free_space;
-    int process_cpu = sched_getcpu();
-    int process_node = numa_node_of_cpu(process_cpu);
-    std::set<int> closest_dax_kmem_nodes = get_closest_dax_kmem_numa_nodes(process_cpu);
-    int closest_dax_kmem_node = *closest_dax_kmem_nodes.begin();
-    numa_node_size64(closest_dax_kmem_node, &free_space);
-    unsigned long long min_alloc_size = 1 * KB;
-    unsigned long long max_alloc_size = 1 * MB;
-    unsigned long long max_allocated_memory = 0.99 * free_space;
+//    long long free_space;
+//    int process_cpu = sched_getcpu();
+//    int process_node = numa_node_of_cpu(process_cpu);
+//    std::set<int> closest_dax_kmem_nodes = get_closest_dax_kmem_numa_nodes(process_cpu);
+//    int closest_dax_kmem_node = *closest_dax_kmem_nodes.begin();
+//    numa_node_size64(closest_dax_kmem_node, &free_space);
+//    unsigned long long min_alloc_size = 1 * KB;
+//    unsigned long long max_alloc_size = 1 * MB;
+//    unsigned long long max_allocated_memory = 0.99 * free_space;
 
-    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
-}
+//    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
+//}
 
-TEST_F(MemkindDaxKmemPerfTests,
-       test_TC_MEMKIND_DAX_KMEM_malloc_max_memory)
-{
-    TypesConf kinds;
-    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM);
-    TypesConf func_calls;
-    func_calls.enable_type(FunctionCalls::MALLOC);
+//TEST_F(MemkindDaxKmemPerfTests,
+//       test_TC_MEMKIND_DAX_KMEM_malloc_max_memory)
+//{
+//    TypesConf kinds;
+//    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM);
+//    TypesConf func_calls;
+//    func_calls.enable_type(FunctionCalls::MALLOC);
 
-    long long free_space;
-    int process_cpu = sched_getcpu();
-    int process_node = numa_node_of_cpu(process_cpu);
-    std::set<int> closest_dax_kmem_nodes = get_closest_dax_kmem_numa_nodes(process_cpu);
-    int closest_dax_kmem_node = *closest_dax_kmem_nodes.begin();
-    numa_node_size64(closest_dax_kmem_node, &free_space);
-    unsigned long long min_alloc_size = 1 * KB;
-    unsigned long long max_alloc_size = 1 * MB;
-    unsigned long long max_allocated_memory = 0.99 * free_space;
+//    long long free_space;
+//    int process_cpu = sched_getcpu();
+//    int process_node = numa_node_of_cpu(process_cpu);
+//    std::set<int> closest_dax_kmem_nodes = get_closest_dax_kmem_numa_nodes(process_cpu);
+//    int closest_dax_kmem_node = *closest_dax_kmem_nodes.begin();
+//    numa_node_size64(closest_dax_kmem_node, &free_space);
+//    unsigned long long min_alloc_size = 1 * KB;
+//    unsigned long long max_alloc_size = 1 * MB;
+//    unsigned long long max_allocated_memory = 0.99 * free_space;
 
-    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
-}
+//    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
+//}
 
-TEST_F(MemkindDaxKmemPerfTests,
-       test_TC_MEMKIND_DAX_KMEM_ALL_malloc_max_memory)
-{
-    TypesConf kinds;
-    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_ALL);
-    TypesConf func_calls;
-    func_calls.enable_type(FunctionCalls::MALLOC);
+//TEST_F(MemkindDaxKmemPerfTests,
+//       test_TC_MEMKIND_DAX_KMEM_ALL_malloc_max_memory)
+//{
+//    TypesConf kinds;
+//    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_ALL);
+//    TypesConf func_calls;
+//    func_calls.enable_type(FunctionCalls::MALLOC);
 
-    long long free_space;
-    int process_cpu = sched_getcpu();
-    int process_node = numa_node_of_cpu(process_cpu);
-    std::set<int> closest_dax_kmem_nodes = get_closest_dax_kmem_numa_nodes(process_cpu);
-    int closest_dax_kmem_node = *closest_dax_kmem_nodes.begin();
-    numa_node_size64(closest_dax_kmem_node, &free_space);
-    unsigned long long min_alloc_size = 1 * KB;
-    unsigned long long max_alloc_size = 1 * MB;
-    unsigned long long max_allocated_memory = 0.99 * free_space;
+//    long long free_space;
+//    int process_cpu = sched_getcpu();
+//    int process_node = numa_node_of_cpu(process_cpu);
+//    std::set<int> closest_dax_kmem_nodes = get_closest_dax_kmem_numa_nodes(process_cpu);
+//    int closest_dax_kmem_node = *closest_dax_kmem_nodes.begin();
+//    numa_node_size64(closest_dax_kmem_node, &free_space);
+//    unsigned long long min_alloc_size = 1 * KB;
+//    unsigned long long max_alloc_size = 1 * MB;
+//    unsigned long long max_allocated_memory = 0.99 * free_space;
 
-    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
-}
+//    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
+//}
 
-TEST_F(MemkindDaxKmemPerfTests,
-       test_TC_MEMKIND_DAX_KMEM_PREFERRED_malloc_max_memory)
-{
-    TypesConf kinds;
-    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
-    TypesConf func_calls;
-    func_calls.enable_type(FunctionCalls::MALLOC);
+//TEST_F(MemkindDaxKmemPerfTests,
+//       test_TC_MEMKIND_DAX_KMEM_PREFERRED_malloc_max_memory)
+//{
+//    TypesConf kinds;
+//    kinds.enable_type(AllocatorTypes::MEMKIND_DAX_KMEM_PREFERRED);
+//    TypesConf func_calls;
+//    func_calls.enable_type(FunctionCalls::MALLOC);
 
-    long long free_space;
-    int process_cpu = sched_getcpu();
-    int process_node = numa_node_of_cpu(process_cpu);
-    std::set<int> closest_dax_kmem_nodes = get_closest_dax_kmem_numa_nodes(process_cpu);
-    int closest_dax_kmem_node = *closest_dax_kmem_nodes.begin();
-    numa_node_size64(closest_dax_kmem_node, &free_space);
-    unsigned long long min_alloc_size = 1 * KB;
-    unsigned long long max_alloc_size = 1 * MB;
-    unsigned long long max_allocated_memory = 0.99 * free_space;
+//    long long free_space;
+//    int process_cpu = sched_getcpu();
+//    int process_node = numa_node_of_cpu(process_cpu);
+//    std::set<int> closest_dax_kmem_nodes = get_closest_dax_kmem_numa_nodes(process_cpu);
+//    int closest_dax_kmem_node = *closest_dax_kmem_nodes.begin();
+//    numa_node_size64(closest_dax_kmem_node, &free_space);
+//    unsigned long long min_alloc_size = 1 * KB;
+//    unsigned long long max_alloc_size = 1 * MB;
+//    unsigned long long max_allocated_memory = 0.99 * free_space;
 
-    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
-}
+//    run(kinds, func_calls, max_allocated_memory / min_alloc_size, min_alloc_size, max_alloc_size, max_allocated_memory, true);
+//}
