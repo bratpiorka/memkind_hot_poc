@@ -42,7 +42,8 @@ private:
                 return true;
             }
         }
-        std::cout << "Failed for, Init: " << nodes.init << "Target: " << nodes.target <<
+        int cpu_id = sched_getcpu();
+        std::cout << "Failed for, Init node: " << nodes.init << " cpu: " << cpu_id << " Target node: " << nodes.target <<
                   std::endl;
         return false;
     }
@@ -198,7 +199,7 @@ private:
     MapNodeSet Capacity_local_nodes() const final
     {
         MapNodeSet nodeset_map;
-        nodeset_map.emplace(NodeSet(0, {0}));
+        nodeset_map.emplace(NodeSet(0, {4}));
         nodeset_map.emplace(NodeSet(1, {5}));
         nodeset_map.emplace(NodeSet(2, {2}));
         nodeset_map.emplace(NodeSet(3, {6}));

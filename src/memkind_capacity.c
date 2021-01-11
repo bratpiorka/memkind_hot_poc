@@ -9,6 +9,10 @@
 
 #include <numa.h>
 
+// debug
+#include <stdio.h>
+#include <stdlib.h>
+
 struct memkind_hi_cap_loc_numanodes_t {
     int init_err;
     struct bitmask **per_cpu_numa_nodes;
@@ -48,6 +52,15 @@ static int memkind_hi_cap_loc_get_mbind_nodemask(
         int cpu_id = sched_getcpu();
         struct bitmask nodemask_bm = {maxnode, nodemask};
         copy_bitmask_to_bitmask(g->per_cpu_numa_nodes[cpu_id], &nodemask_bm);
+
+        printf("got alloc from cpu %d, possible nodes are: ", cpu_id);
+        int max_node_id = numa_max_node();
+        int j;
+        for (j = 0; j < (max_node_id + 1); ++j) {
+            if (numa_bitmask_isbitset(g->per_cpu_numa_nodes[cpu_id], j))
+                printf(" %d", j);
+        }
+        printf("\n");
     }
 
     return g->init_err;

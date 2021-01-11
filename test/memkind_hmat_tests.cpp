@@ -72,8 +72,11 @@ TEST_P(MemkindHMATFunctionalTestsParam,
         CPU_ZERO(&cpu_set);
         CPU_SET(thread_id, &cpu_set);
         int status = sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set);
-        int cpu = sched_getcpu();
+        int cpu = sched_getcpu();                
         EXPECT_EQ(thread_id, cpu);
+        
+        printf("malloc on cpu %d START\n", cpu);
+
         void *ptr = memkind_malloc(memory_kind, size);
         if (topology->is_kind_supported(memory_kind)) {
             EXPECT_TRUE(ptr != nullptr);
@@ -84,7 +87,11 @@ TEST_P(MemkindHMATFunctionalTestsParam,
             status = get_mempolicy(&target_node, nullptr, 0, ptr,
                                    MPOL_F_NODE | MPOL_F_ADDR);
             EXPECT_EQ(0, status);
+
+            printf("malloc on cpu %d, node %d, target %d CHECK\n", cpu, init_node, target_node);
+
             auto res = topology->verify_kind(memory_kind, {init_node, target_node});
+            printf("malloc on cpu %d, node %d, target %d END\n", cpu, init_node, target_node);
             EXPECT_EQ(true, res);
             memkind_free(memory_kind, ptr);
         } else {

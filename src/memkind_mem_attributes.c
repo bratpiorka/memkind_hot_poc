@@ -147,6 +147,18 @@ success:
     free(local_nodes);
     hwloc_topology_destroy(topology);
 
+    printf("--hi cap loc init--");
+    int j;
+    for (i = 0; i < num_cpus; i++) {
+        printf("\nnode: %d ", numa_node_of_cpu(i));
+        printf("cpu %d:", i);
+        for (j = 0; j < (max_node_id + 1); ++j) {
+            if (numa_bitmask_isbitset((*nodes_mask)[i], j))
+                printf(" %d", j);
+        }
+    }
+    printf("\n--hi cap loc init END--\n");
+
     return ret;
 }
 
