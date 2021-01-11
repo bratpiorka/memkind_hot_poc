@@ -25,6 +25,11 @@ private:
     {
         return {};
     }
+    virtual MapNodeSet Capacity_local_nodes() const
+    {
+        return {};
+    }
+
     bool test_node_set(const Nodes &nodes, const MapNodeSet &map_nodes) const
     {
         auto init_node_tpg = map_nodes.find(nodes.init);
@@ -46,6 +51,8 @@ public:
     {
         if (memory_kind == MEMKIND_HBW)
             return (HBW_nodes().size() > 0);
+        else if (memory_kind == MEMKIND_HIGHEST_CAPACITY_LOCAL)
+            return (Capacity_local_nodes().size() > 0);
         return false;
     }
 
@@ -53,6 +60,8 @@ public:
     {
         if (memory_kind == MEMKIND_HBW)
             return test_node_set(nodes, HBW_nodes());
+        else if (memory_kind == MEMKIND_HIGHEST_CAPACITY_LOCAL)
+            return test_node_set(nodes, Capacity_local_nodes());
         return false;
     }
     virtual ~AbstractTopology() = default;
@@ -67,6 +76,13 @@ private:
         nodeset_map.emplace(NodeSet(0, {1}));
         return nodeset_map;
     }
+
+    MapNodeSet Capacity_local_nodes() const final
+    {
+        MapNodeSet nodeset_map;
+        nodeset_map.emplace(NodeSet(0, {0}));
+        return nodeset_map;
+    }
 };
 
 class KNM_SNC2 : public AbstractTopology
@@ -77,6 +93,14 @@ private:
         MapNodeSet nodeset_map;
         nodeset_map.emplace(NodeSet(0, {2}));
         nodeset_map.emplace(NodeSet(1, {3}));
+        return nodeset_map;
+    }
+
+    MapNodeSet Capacity_local_nodes() const final
+    {
+        MapNodeSet nodeset_map;
+        nodeset_map.emplace(NodeSet(0, {0}));
+        nodeset_map.emplace(NodeSet(1, {1}));
         return nodeset_map;
     }
 };
@@ -93,10 +117,105 @@ private:
         nodeset_map.emplace(NodeSet(3, {7}));
         return nodeset_map;
     }
+
+    MapNodeSet Capacity_local_nodes() const final
+    {
+        MapNodeSet nodeset_map;
+        nodeset_map.emplace(NodeSet(0, {0}));
+        nodeset_map.emplace(NodeSet(1, {1}));
+        nodeset_map.emplace(NodeSet(2, {2}));
+        nodeset_map.emplace(NodeSet(3, {3}));
+        return nodeset_map;
+    }
 };
 
 class CLX_2_var1 : public AbstractTopology
-{};
+{
+private:
+    MapNodeSet Capacity_local_nodes() const final
+    {
+        MapNodeSet nodeset_map;
+        nodeset_map.emplace(NodeSet(0, {2}));
+        nodeset_map.emplace(NodeSet(1, {1}));
+        return nodeset_map;
+    }
+};
 
+class CLX_2_var2 : public AbstractTopology
+{
+private:
+    MapNodeSet Capacity_local_nodes() const final
+    {
+        MapNodeSet nodeset_map;
+        nodeset_map.emplace(NodeSet(0, {0}));
+        nodeset_map.emplace(NodeSet(1, {2}));
+        return nodeset_map;
+    }
+};
+
+class CLX_2_var3 : public AbstractTopology
+{
+private:
+    MapNodeSet Capacity_local_nodes() const final
+    {
+        MapNodeSet nodeset_map;
+        nodeset_map.emplace(NodeSet(0, {2}));
+        nodeset_map.emplace(NodeSet(1, {3}));
+        return nodeset_map;
+    }
+};
 class CLX_4_var1 : public AbstractTopology
-{};
+{
+private:
+    MapNodeSet Capacity_local_nodes() const final
+    {
+        MapNodeSet nodeset_map;
+        nodeset_map.emplace(NodeSet(0, {4}));
+        nodeset_map.emplace(NodeSet(1, {5}));
+        nodeset_map.emplace(NodeSet(2, {6}));
+        nodeset_map.emplace(NodeSet(3, {7}));
+        return nodeset_map;
+    }
+};
+
+class CLX_4_var2 : public AbstractTopology
+{
+private:
+    MapNodeSet Capacity_local_nodes() const final
+    {
+        MapNodeSet nodeset_map;
+        nodeset_map.emplace(NodeSet(0, {0}));
+        nodeset_map.emplace(NodeSet(1, {4}));
+        nodeset_map.emplace(NodeSet(2, {2}));
+        nodeset_map.emplace(NodeSet(3, {3}));
+        return nodeset_map;
+    }
+};
+
+class CLX_4_var3 : public AbstractTopology
+{
+private:
+    MapNodeSet Capacity_local_nodes() const final
+    {
+        MapNodeSet nodeset_map;
+        nodeset_map.emplace(NodeSet(0, {0}));
+        nodeset_map.emplace(NodeSet(1, {5}));
+        nodeset_map.emplace(NodeSet(2, {2}));
+        nodeset_map.emplace(NodeSet(3, {6}));
+        return nodeset_map;
+    }
+};
+
+class CLX_4_var4 : public AbstractTopology
+{
+private:
+    MapNodeSet Capacity_local_nodes() const final
+    {
+        MapNodeSet nodeset_map;
+        nodeset_map.emplace(NodeSet(0, {4}));
+        nodeset_map.emplace(NodeSet(1, {1}));
+        nodeset_map.emplace(NodeSet(2, {2}));
+        nodeset_map.emplace(NodeSet(3, {5}));
+        return nodeset_map;
+    }
+};
