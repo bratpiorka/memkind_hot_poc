@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 int ctl_load_config(char *buf, char **kind_name, char **pmem_path,
-                    char **pmem_size, unsigned *ratio_value);
+                    unsigned long long *pmem_size, unsigned *ratio_value);
 
 #ifdef __cplusplus
 }

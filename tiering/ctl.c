@@ -41,6 +41,34 @@ static int ctl_parse_u(const char *str, unsigned *dest)
     return 0;
 }
 
+/*
+ * ctl_parse_ull -- (internal) parses and returns an unsigned long long integer
+ */
+static int ctl_parse_ull(const char *str, unsigned long long *dest)
+{
+    char *endptr;
+    int olderrno = errno;
+    errno = 0;
+    unsigned long long val;
+    if (str[0] != '-') {
+        unsigned long long val_ul = strtoull(str, &endptr, 0);
+        if (val_ul <= UINT_MAX) {
+            val = val_ul;
+        } else {
+            return -1;
+        }
+    } else {
+        return -1;
+    }
+    if (endptr == str || errno != 0) {
+        return -1;
+    }
+    errno = olderrno;
+    *dest = val;
+
+    return 0;
+}
+
 static int ctl_validate_kind_name(const char *kind_name)
 {
     if (kind_name == NULL) {
@@ -56,25 +84,50 @@ static int ctl_validate_kind_name(const char *kind_name)
 }
 
 // TODO: Parse pmem_size string to unsigned long long supporting kMGT suffixes
-static int ctl_validate_pmem_size(const char *pmem_size)
+static int ctl_parse_pmem_size(const char *pmem_size_str,
+                               unsigned long long *pmem_size)
 {
-    if (pmem_size == NULL) {
+    if (pmem_size_str == NULL) {
         log_err("PMEM size not provided");
         return -1;
     }
 
     regex_t regex;
-    int ret = regcomp(&regex, "[[:digit:]+]G", 0);
+    size_t nmatch = 1;
+    regmatch_t pmatch[1];
+
+    int ret = regcomp(&regex, "^[[:digit:]]*[kMGT]{0,1}$", REG_EXTENDED);
     if (ret) {
         log_err(
             "Unsuccessful compilation of regex occurred during validation of PMEM size");
         return -1;
     }
-    int regex_ret = regexec(&regex, pmem_size, 0, NULL, 0);
+    int regex_ret = regexec(&regex, pmem_size_str, 0, NULL, 0);
     if (regex_ret == REG_NOMATCH) {
-        log_err("Unsupported pmem_size format: %s", pmem_size);
+        log_err("Unsupported pmem_size format: %s", pmem_size_str);
         return -1;
     }
+
+    ret = regcomp(&regex, "^[[:digit:]]*", 0);
+    if (ret) {
+        log_err(
+            "Unsuccessful compilation of regex occurred during parsing of PMEM size");
+        return -1;
+    }
+    regex_ret = regexec(&regex, pmem_size_str, nmatch, pmatch, 0);
+    if (regex_ret != 0) {
+        log_err("Parsing of pmem size '%s' failed", pmem_size_str);
+        return -1;
+    }
+    ret = ctl_parse_ull(pmem_size_str, pmem_size);
+    int olderrno = errno;
+    errno = 0;
+    if (ret != 0 || errno != 0) {
+        log_err("Unsupported pmem size: %s", pmem_size_str);
+        pmem_size = NULL;
+        return -1;
+    }
+    errno = olderrno;
 
     return 0;
 }
@@ -102,10 +155,11 @@ static int ctl_parse_ratio(const char *ratio_str, unsigned *dest)
 
 /*
  * ctl_parse_query -- (internal) splits an entire query string
- * into kind_name and ratio_value
+ * into kind_name, pmem_path, pmem_size and ratio_value
  */
 static int ctl_parse_query(char *qbuf, char **kind_name, char **pmem_path,
-                           char **pmem_size, unsigned *ratio_value)
+                           unsigned long long *pmem_size_value,
+                           unsigned *ratio_value)
 {
     char *sptr = NULL;
     *kind_name = strtok_r(qbuf, CTL_VALUE_SEPARATOR, &sptr);
@@ -114,13 +168,15 @@ static int ctl_parse_query(char *qbuf, char **kind_name, char **pmem_path,
         return -1;
     }
 
+    char *pmem_size_str = NULL;
     if (strcmp(*kind_name, "FS_DAX")) {
+        // TODO: Raise error
         *pmem_path = "N/A";
-        *pmem_size = "N/A";
+        *pmem_size_value = 0;
     } else {
         *pmem_path = strtok_r(NULL, CTL_VALUE_SEPARATOR, &sptr);
-        *pmem_size = strtok_r(NULL, CTL_VALUE_SEPARATOR, &sptr);
-        ret = ctl_validate_pmem_size(*pmem_size);
+        pmem_size_str = strtok_r(NULL, CTL_VALUE_SEPARATOR, &sptr);
+        ret = ctl_parse_pmem_size(pmem_size_str, pmem_size_value);
         if (ret != 0) {
             return -1;
         }
@@ -143,7 +199,7 @@ static int ctl_parse_query(char *qbuf, char **kind_name, char **pmem_path,
 }
 
 int ctl_load_config(char *buf, char **kind_name, char **pmem_path,
-                    char **pmem_size, unsigned *ratio_value)
+                    unsigned long long *pmem_size, unsigned *ratio_value)
 {
     int r = 0;
     char *sptr = NULL;

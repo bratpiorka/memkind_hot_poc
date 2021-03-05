@@ -55,14 +55,14 @@ static int parse_env_string(char *env_var_string)
 {
     char *kind_name;
     char *pmem_path;
-    char *pmem_size;
+    unsigned long long pmem_size;
     unsigned ratio_value;
     ctl_load_config(env_var_string, &kind_name, &pmem_path, &pmem_size,
                     &ratio_value);
 
     log_debug("kind_name: %s", kind_name);
     log_debug("pmem_path: %s", pmem_path);
-    log_debug("pmem_size: %s", pmem_size);
+    log_debug("pmem_size: %llu", pmem_size);
     log_debug("ratio_value: %u", ratio_value);
 
     return 0;
