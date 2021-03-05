@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: BSD-2-Clause
 # Copyright (C) 2021 Intel Corporation.
 
+import pytest
 import re
 
 from python_framework import CMD_helper
@@ -166,15 +167,16 @@ class Test_tiering_config_env(object):
         assert "MEMKIND_MEM_TIERING_LOG_DEBUG: ratio_value: 1" in output.splitlines(), \
                "Wrong message"
 
-    def test_FSDAX_only(self):
+    @pytest.mark.parametrize("pmem_size", ["0", "1k", "10M", "10G", "100T"])
+    def test_FSDAX_only(self, pmem_size):
         output = self.get_cmd_output(
-            "MEMKIND_MEM_TIERING_CONFIG=FS_DAX:/tmp/:10G:1", log_level="2")
+            "MEMKIND_MEM_TIERING_CONFIG=FS_DAX:/tmp/:" + pmem_size + ":1", log_level="2")
 
         assert "MEMKIND_MEM_TIERING_LOG_DEBUG: kind_name: FS_DAX" in output.splitlines(), \
                "Wrong message"
         assert "MEMKIND_MEM_TIERING_LOG_DEBUG: pmem_path: /tmp/" in output.splitlines(), \
                "Wrong message"
-        assert "MEMKIND_MEM_TIERING_LOG_DEBUG: pmem_size: 10G" in output.splitlines(), \
+        assert "MEMKIND_MEM_TIERING_LOG_DEBUG: pmem_size: " + re.match(r"\d+", pmem_size).group(0) in output.splitlines(), \
                "Wrong message"
         assert "MEMKIND_MEM_TIERING_LOG_DEBUG: ratio_value: 1" in output.splitlines(), \
                "Wrong message"
@@ -199,6 +201,12 @@ class Test_tiering_config_env(object):
 
         assert output.splitlines()[0] == \
             "MEMKIND_MEM_TIERING_LOG_ERROR: Unsupported pmem_size format: as", "Wrong message"
+
+    def test_FSDAX_negative_all_suffixes(self):
+        output = self.get_cmd_output(
+            "MEMKIND_MEM_TIERING_CONFIG=FS_DAX:/tmp/:10kMGT:1")
+        assert output.splitlines()[0] == \
+            "MEMKIND_MEM_TIERING_LOG_ERROR: Unsupported pmem_size format: 10kMGT", "Wrong message"
 
     def test_FSDAX_negative_ratio(self):
         output = self.get_cmd_output(
