@@ -7,6 +7,7 @@
 #include <tiering/ctl.h>
 #include <tiering/memtier_log.h>
 
+#include <limits.h>
 #include <pthread.h>
 #include <string.h>
 

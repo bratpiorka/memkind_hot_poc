@@ -19,6 +19,8 @@
 #define CTL_STRING_QUERY_SEPARATOR ","
 
 static struct memtier_tier *current_tier;
+static struct memtier_tier *tiers[UINT_MAX];
+static unsigned tier_count;
 
 typedef struct ctl_tier_cfg {
     char *kind_name;
@@ -209,17 +211,19 @@ static int ctl_parse_query(char *qbuf, ctl_tier_cfg *tier)
 /*
  * ctl_load_config -- splits an entire config into query strings
  */
-static int ctl_load_config(char *buf, ctl_tier_cfg *tier,
-                           memtier_policy_t *policy)
+static int ctl_load_config(char *buf, ctl_tier_cfg **tiers,
+                           unsigned *tier_count, memtier_policy_t *policy)
 {
     int ret;
     char *sptr = NULL;
     char *qbuf = buf;
 
-    size_t query_count = 1;
+    unsigned query_count = 1;
     while (*qbuf)
         if (*qbuf++ == *CTL_STRING_QUERY_SEPARATOR)
             ++query_count;
+
+    *tier_count = query_count;
 
     qbuf = strtok_r(buf, CTL_STRING_QUERY_SEPARATOR, &sptr);
     if (qbuf == NULL) {
@@ -235,7 +239,8 @@ static int ctl_load_config(char *buf, ctl_tier_cfg *tier,
     // TODO: Allow multiple kinds to be created
     while (query_count) {
         if (query_count > 1) {
-            ret = ctl_parse_query(qbuf, tier);
+            ret = ctl_parse_query(qbuf, *tiers);
+            tiers++;
         } else {
             ret = ctl_parse_policy(qbuf, policy);
         }
@@ -284,55 +289,63 @@ static const char *ctl_policy_to_str(memtier_policy_t policy)
 struct memtier_kind *ctl_create_tier_kind_from_env(char *env_var_string)
 {
     struct memtier_kind *tier_kind;
-    struct ctl_tier_cfg tier = {NULL, NULL, 0, 0};
+    struct ctl_tier_cfg *tier_cfgs = NULL;
+    // static struct tier_draft tier;
     memtier_policy_t policy = MEMTIER_POLICY_MAX_VALUE;
 
-    int ret = ctl_load_config(env_var_string, &tier, &policy);
+    int ret = ctl_load_config(env_var_string, &tier_cfgs, &tier_count, &policy);
     if (ret != 0) {
         return NULL;
     }
 
-    memkind_t kind = ctl_get_kind(&tier);
-    if (kind == NULL) {
-        return NULL;
+    unsigned i = 0;
+
+    for (; i < tier_count; ++i) {
+        ctl_tier_cfg current_tier_draft = *tier_cfgs;
+        memkind_t kind = ctl_get_kind(&current_tier_draft);
+        if (kind == NULL) {
+            return NULL;
+        }
+
+        log_debug("ratio_value: %u", current_tier_draft.ratio_value);
+        log_debug("policy: %s", ctl_policy_to_str(policy));
+
+        current_tier = memtier_tier_new(kind);
+        if (current_tier == NULL) {
+            return NULL;
+        }
+
+        struct memtier_builder *builder = memtier_builder_new();
+        if (!builder) {
+            goto tier_delete;
+        }
+
+        ret = memtier_builder_add_tier(builder, current_tier,
+                                       current_tier_draft.ratio_value);
+        if (ret != 0) {
+            goto builder_delete;
+        }
+
+        ret = memtier_builder_set_policy(builder, policy);
+        if (ret != 0) {
+            goto builder_delete;
+        }
+
+        ret = memtier_builder_construct_kind(builder, &tier_kind);
+        if (ret != 0) {
+            goto builder_delete;
+        }
+        memtier_builder_delete(builder);
+        tiers[i] = current_tier;
+        tier_cfgs++;
+        continue;
+
+    builder_delete:
+        memtier_builder_delete(builder);
+
+    tier_delete:
+        memtier_tier_delete(current_tier);
     }
-
-    log_debug("ratio_value: %u", tier.ratio_value);
-    log_debug("policy: %s", ctl_policy_to_str(policy));
-
-    current_tier = memtier_tier_new(kind);
-    if (current_tier == NULL) {
-        return NULL;
-    }
-
-    struct memtier_builder *builder = memtier_builder_new();
-    if (!builder) {
-        goto tier_delete;
-    }
-
-    ret = memtier_builder_add_tier(builder, current_tier, tier.ratio_value);
-    if (ret != 0) {
-        goto builder_delete;
-    }
-
-    ret = memtier_builder_set_policy(builder, policy);
-    if (ret != 0) {
-        goto builder_delete;
-    }
-
-    ret = memtier_builder_construct_kind(builder, &tier_kind);
-    if (ret != 0) {
-        goto builder_delete;
-    }
-    memtier_builder_delete(builder);
-
-    return tier_kind;
-
-builder_delete:
-    memtier_builder_delete(builder);
-
-tier_delete:
-    memtier_tier_delete(current_tier);
 
     return NULL;
 }
