@@ -285,7 +285,8 @@ check_PROGRAMS += test/autohbw_candidates \
 if HAVE_CXX11
 check_PROGRAMS += test/memkind_allocated \
                   test/memkind_cpp_allocator \
-                  test/pmem_cpp_allocator
+                  test/pmem_cpp_allocator \
+                  test/test_thread
 endif
 
 test_autohbw_candidates_LDADD = libmemkind.la
@@ -310,6 +311,7 @@ if HAVE_CXX11
 test_memkind_allocated_LDADD = libmemkind.la
 test_memkind_cpp_allocator_LDADD = libmemkind.la
 test_pmem_cpp_allocator_LDADD = libmemkind.la
+test_test_thread_LDADD = libmemkind.la
 endif
 
 test_autohbw_candidates_SOURCES = examples/autohbw_candidates.c
@@ -337,6 +339,7 @@ if HAVE_CXX11
 test_memkind_allocated_SOURCES = examples/memkind_allocated_example.cpp examples/memkind_allocated.hpp
 test_memkind_cpp_allocator_SOURCES = examples/memkind_cpp_allocator.cpp
 test_pmem_cpp_allocator_SOURCES = examples/pmem_cpp_allocator.cpp
+test_test_thread_SOURCES = examples/test_thread.cpp
 endif
 
 clean-local: test-clean
