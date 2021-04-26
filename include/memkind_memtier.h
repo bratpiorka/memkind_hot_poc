@@ -92,6 +92,17 @@ memtier_builder_construct_memtier_memory(struct memtier_builder *builder);
 void memtier_delete_memtier_memory(struct memtier_memory *memory);
 
 ///
+/// \brief Set memtier policy property
+/// \note STANDARD API
+/// \param builder memtier builder
+/// \param path path to property in tree-like structure
+/// \param val value to set
+/// \return Operation status, 0 on success, other values on
+/// failure
+///
+int memtier_ctl_set(struct memtier_builder *builder, const char *path,
+                    const void *val);
+///
 /// \brief Allocates size bytes of uninitialized storage of the specified
 ///        memtier memory
 /// \note STANDARD API
@@ -192,6 +203,14 @@ int memtier_kind_posix_memalign(memkind_t kind, void **memptr, size_t alignment,
 /// \return Number of usable bytes
 ///
 size_t memtier_usable_size(void *ptr);
+
+///
+/// \brief Free the memory space allocated with the memtier API
+/// \note STANDARD API
+/// \param ptr pointer to the allocated memory
+/// \param memory specified memtier memory
+///
+void memtier_memory_free(struct memtier_memory *memory, void *ptr);
 
 ///
 /// \brief Free the memory space allocated with the memtier API
