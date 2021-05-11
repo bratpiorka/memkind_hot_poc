@@ -187,16 +187,25 @@ static int ctl_parse_ratio(char **sptr, unsigned *dest)
 static int ctl_parse_query(char *qbuf, memkind_t *kind, unsigned *ratio)
 {
     char *sptr = NULL;
-    char *ratio_str = NULL;
     int ret = -1;
 
     int is_fsdax = 0;
     char *fsdax_path = NULL;
+    char *ratio_str = NULL;
     char *fsdax_size_str = NULL;
+
+    int kind_set = 0;
+    int fsdax_path_set = 0;
+    int fsdax_size_set = 0;
+    int ratio_set = 0;
 
     char *param_str = strtok_r(qbuf, CTL_VALUE_SEPARATOR, &sptr);
     while (param_str != NULL) {
         if (!strcmp(param_str, "KIND")) {
+            if (kind_set) {
+                log_err("KIND already defined");
+                return -1;
+            }
             char *kind_name = strtok_r(NULL, CTL_PARAM_SEPARATOR, &sptr);
             if (!strcmp(kind_name, "DRAM")) {
                 *kind = MEMKIND_DEFAULT;
@@ -208,16 +217,35 @@ static int ctl_parse_query(char *qbuf, memkind_t *kind, unsigned *ratio)
                 log_err("Unsupported kind: %s", kind_name);
                 return -1;
             }
+            kind_set = 1;
         } else if (!strcmp(param_str, "PATH")) {
+            if (fsdax_path_set) {
+                log_err("PATH already defined");
+                return -1;
+            }
             fsdax_path = strtok_r(NULL, CTL_PARAM_SEPARATOR, &sptr);
+            fsdax_path_set = 1;
         } else if (!strcmp(param_str, "PMEM_SIZE_LIMIT")) {
+            if (fsdax_size_set) {
+                log_err("PMEM_SIZE_LIMIT already defined");
+                return -1;
+            }
             fsdax_size_str = strtok_r(NULL, CTL_PARAM_SEPARATOR, &sptr);
+            fsdax_size_set = 1;
         } else if (!strcmp(param_str, "RATIO")) {
+            if (ratio_set) {
+                log_err("RATIO already defined");
+                return -1;
+            }
             ratio_str = strtok_r(NULL, CTL_PARAM_SEPARATOR, &sptr);
             ret = ctl_parse_ratio(&ratio_str, ratio);
             if (ret != 0) {
                 return -1;
             }
+            ratio_set = 1;
+        } else {
+            log_err("Invalid parameter: %s", param_str);
+            return -1;
         }
 
         param_str = strtok_r(NULL, CTL_VALUE_SEPARATOR, &sptr);
@@ -315,20 +343,16 @@ struct memtier_memory *ctl_create_tier_memory_from_env(char *env_var_string)
             log_err("Failed to parse query: %s", qbuf);
             goto cleanup_after_failure;
         }
+
         temp_cfg[i].kind = kind;
         temp_cfg[i].ratio = ratio;
         qbuf = strtok_r(NULL, CTL_STRING_QUERY_SEPARATOR, &sptr);
-
-        if (ret != 0) {
-            goto cleanup_after_failure;
-        }
     }
 
     qbuf = strtok_r(qbuf, CTL_VALUE_SEPARATOR, &sptr);
     if (!strcmp(qbuf, "POLICY")) {
         ret = ctl_parse_policy(sptr, &policy);
         if (ret != 0) {
-            log_err("Failed to parse policy: %s", qbuf);
             goto cleanup_after_failure;
         }
     } else {
@@ -338,7 +362,6 @@ struct memtier_memory *ctl_create_tier_memory_from_env(char *env_var_string)
 
     struct memtier_builder *builder = memtier_builder_new(policy);
     if (!builder) {
-        log_err("Failed to parse policy: %s", qbuf);
         goto cleanup_after_failure;
     }
 
@@ -346,7 +369,6 @@ struct memtier_memory *ctl_create_tier_memory_from_env(char *env_var_string)
         ret = memtier_builder_add_tier(builder, temp_cfg[i].kind,
                                        temp_cfg[i].ratio);
         if (ret != 0) {
-            log_err("Failed to add tier%s", qbuf);
             goto destroy_builder;
         }
     }
