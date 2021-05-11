@@ -211,6 +211,7 @@ memtier_policy_dynamic_threshold_get_kind(struct memtier_memory *memory,
             break;
         }
     }
+    log_err("size %zu -> tier %d", size, i);
     return memory->cfg[i].kind;
 }
 
