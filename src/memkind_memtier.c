@@ -98,6 +98,12 @@
 #define THRESHOLD_CHECK_CNT 20
 #define THRESHOLD_STEP      1024
 
+//PEBS
+    float old_time_window_hotness_weight;
+    float pebs_freq_hz;
+    unsigned long sample_frequency;
+    unsigned long long hotness_measure_window;
+
 // Macro to get number of thresholds from parent object
 #define THRESHOLD_NUM(obj) ((obj->cfg_size) - 1)
 
@@ -786,8 +792,38 @@ static struct memtier_memory *
 builder_hot_create_memory(struct memtier_builder *builder)
 {
     int i;
+    old_time_window_hotness_weight =
+        0.9; // should not stay like this... only for tests and POC
+    // smaller value -> more frequent sampling
+    // 10000 = around 100 samples on *my machine* / sec in matmul test
+    sample_frequency = 10000;
+    pebs_freq_hz = 5.0;
+    // hotness calculation
+    hotness_measure_window = 1000000000ULL; // time window is 1s
+    char *env_var = memkind_get_env("HOTNESS_MEASURE_WINDOW");
+    if (env_var) {
+        hotness_measure_window = strtoull(env_var, NULL, 10);
+    }
+    env_var = memkind_get_env("SAMPLE_FREQUENCY");
+    if (env_var) {
+        sample_frequency = strtoul(env_var, NULL, 10);
+    }
+    env_var = memkind_get_env("PEBS_FREQ_HZ");
+    if (env_var) {
+        pebs_freq_hz = strtof(env_var, NULL);
+    }
+    env_var = memkind_get_env("OLD_TIME_WINDOW_HOTNESS_WEIGHT");
+    if (env_var) {
+        old_time_window_hotness_weight = strtof(env_var, NULL);
+    }
+    log_info("sample_frequency = %lu", sample_frequency);
+    log_info("pebs_freq_hz = %.1f", pebs_freq_hz);
+    log_info("hotness_measure_window = %llu", hotness_measure_window);
+    log_info("old_time_window_hotness_weight = %.1f",
+             old_time_window_hotness_weight);
+
     // TODO use some properties? hotness weight should be configurable
-    tachanka_init(OLD_TIME_WINDOW_HOTNESS_WEIGHT, RANKING_BUFFER_SIZE_ELEMENTS);
+    tachanka_init(old_time_window_hotness_weight, RANKING_BUFFER_SIZE_ELEMENTS);
     pebs_init(getpid());
 
     struct memtier_memory *memory =
