@@ -1105,14 +1105,13 @@ MEMKIND_EXPORT void *memtier_realloc(struct memtier_memory *memory, void *ptr,
 MEMKIND_EXPORT void *memtier_kind_realloc(memkind_t kind, void *ptr,
                                           size_t size)
 {
-    size_t old_size = 0u;
-    if (size == 0 && ptr != NULL) {
-        old_size = jemk_malloc_usable_size(ptr);
 #ifdef MEMKIND_DECORATION_ENABLED
         if (memtier_kind_free_pre)
             memtier_kind_free_pre(&ptr);
 #endif
 
+    size_t old_size = jemk_malloc_usable_size(ptr);
+    if (size == 0 && ptr != NULL) {       
         if (pol == MEMTIER_POLICY_DATA_HOTNESS) {
 //             unregister_block(ptr);
             EventEntry_t entry = {
@@ -1139,7 +1138,7 @@ MEMKIND_EXPORT void *memtier_kind_realloc(memkind_t kind, void *ptr,
         decrement_alloc_size(kind->partition, old_size);
         memkind_free(kind, ptr);
         return NULL;
-    } else if (ptr == NULL) {
+    } else if ((pol == MEMTIER_POLICY_DATA_HOTNESS) && (ptr == NULL)) {
             EventEntry_t entry = {
                 .type = EVENT_CREATE_ADD,
                 .data.createAddData = {
