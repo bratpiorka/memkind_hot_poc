@@ -1105,16 +1105,14 @@ MEMKIND_EXPORT void *memtier_realloc(struct memtier_memory *memory, void *ptr,
 MEMKIND_EXPORT void *memtier_kind_realloc(memkind_t kind, void *ptr,
                                           size_t size)
 {
-    size_t old_size = 0u;
     if (size == 0 && ptr != NULL) {
-        old_size = jemk_malloc_usable_size(ptr);
 #ifdef MEMKIND_DECORATION_ENABLED
         if (memtier_kind_free_pre)
             memtier_kind_free_pre(&ptr);
 #endif
-
-        if (pol == MEMTIER_POLICY_DATA_HOTNESS) {
-//             unregister_block(ptr);
+    size_t old_size = jemk_malloc_usable_size(ptr);
+    if (pol == MEMTIER_POLICY_DATA_HOTNESS) {
+//          unregister_block(ptr);
             EventEntry_t entry = {
                 .type = EVENT_DESTROY_REMOVE,
                 .data.destroyRemoveData = {
@@ -1140,6 +1138,7 @@ MEMKIND_EXPORT void *memtier_kind_realloc(memkind_t kind, void *ptr,
         memkind_free(kind, ptr);
         return NULL;
     } else if (ptr == NULL) {
+        if (pol == MEMTIER_POLICY_DATA_HOTNESS) {
             EventEntry_t entry = {
                 .type = EVENT_CREATE_ADD,
                 .data.createAddData = {
@@ -1160,9 +1159,10 @@ MEMKIND_EXPORT void *memtier_kind_realloc(memkind_t kind, void *ptr,
 #else
         (void)success;
 #endif
+        }
         return memtier_kind_malloc(kind, size);
     }
-    decrement_alloc_size(kind->partition, old_size);
+    decrement_alloc_size(kind->partition, jemk_malloc_usable_size(ptr));
 
     void *n_ptr = memkind_realloc(kind, ptr, size);
     if (pol == MEMTIER_POLICY_DATA_HOTNESS) {
