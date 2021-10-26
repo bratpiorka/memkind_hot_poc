@@ -475,3 +475,18 @@ MEMKIND_EXPORT bool tachanka_ranking_event_pop(EventEntry_t *event)
     }
     return ranking_event_pop(&ranking_event_buff, event);
 }
+
+#if RANKING_TOUCH_ALL
+MEMKIND_EXPORT void tachanka_ranking_touch_all(__u64 timestamp, double add_hotness)
+{
+    int i;
+    for (i = 0; i < ntypes; ++i) {
+        ranking_touch(ranking, &ttypes[i], timestamp, add_hotness);
+    }
+}
+#endif
+
+// Getter used in the tachanka_check_ranking_touch_all test
+MEMKIND_EXPORT double tachanka_get_frequency(size_t index) {
+    return ttypes[index].f;
+}

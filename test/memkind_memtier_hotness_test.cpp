@@ -266,6 +266,44 @@ TEST_P(MemkindMemtierHotnessTest, test_matmul)
 INSTANTIATE_TEST_CASE_P(numObjsParam, MemkindMemtierHotnessTest,
                         ::testing::Values(3, 20));
 
+#if RANKING_TOUCH_ALL
+TEST_F(MemkindMemtierHotnessTest, check_ranking_touch_all) {
+    const int MALLOC_COUNT = 5;
+    double old_freqs[MALLOC_COUNT];
+    unsigned long long hotness_measure_window = 1000000000; // equals to the hotness_measure_window defined in pebs_init()
+    std::vector<void *> malloc_vec;
+
+    int res = memtier_builder_add_tier(m_builder, MEMKIND_DEFAULT, 1);
+    ASSERT_EQ(0, res);
+    res = memtier_builder_add_tier(m_builder, MEMKIND_REGULAR, 1);
+    ASSERT_EQ(0, res);
+    m_tier_memory = memtier_builder_construct_memtier_memory(m_builder);
+    ASSERT_NE(nullptr, m_tier_memory);
+
+    for (size_t i = 1; i <= MALLOC_COUNT; ++i) {
+        void *ptr = memtier_malloc(m_tier_memory, i);
+        ASSERT_NE(nullptr, ptr);
+        malloc_vec.push_back(ptr);
+    }
+
+    for (size_t i = 0; i < MALLOC_COUNT; ++i) {
+        old_freqs[i] = tachanka_get_frequency(i);
+    }
+    tachanka_ranking_touch_all(1, 1e6);
+    sleep(2);
+    tachanka_ranking_touch_all(hotness_measure_window, 1e6);
+    tachanka_ranking_touch_all(2 * hotness_measure_window + 1, 1e6);
+    tachanka_ranking_touch_all(3 * hotness_measure_window + 2, 0);
+    for (size_t i = 0; i < MALLOC_COUNT; ++i) {
+        ASSERT_NE(old_freqs[i], tachanka_get_frequency(i));
+    }
+
+    for (auto const &ptr : malloc_vec) {
+        memtier_free(ptr);
+    }
+}
+#endif
+
 // ----------------- hotness thresh tests
 
 extern "C" {

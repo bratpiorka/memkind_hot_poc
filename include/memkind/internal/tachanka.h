@@ -46,6 +46,15 @@ double tachanka_get_hot_thresh(void);
 bool tachanka_ranking_event_push(EventEntry_t *event);
 bool tachanka_ranking_event_pop(EventEntry_t *event);
 
+/// \brief Touch every ttype object to update hotness
+/// \param timestamp timestamp from pebs
+/// \param add_hotness hotness value to be added to all types
+void tachanka_ranking_touch_all(__u64 timestamp, double add_hotness);
+
+/// \brief Getter for type's frequency
+/// \param index index of a type in ttypes list 
+double tachanka_get_frequency(size_t index);
+
 struct ttype {
     uint64_t hash;
     int num_allocs; // TODO
