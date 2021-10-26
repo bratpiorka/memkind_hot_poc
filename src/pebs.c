@@ -279,6 +279,9 @@ void *pebs_monitor(void *state)
                         entry.data.touchData.timestamp, 0 /*called from malloc*/);
                         g_queue_counter_touch++;
 
+                        // Touch every ttype object to update hotness
+                        ranking_touch_all(timestamp);
+
 //                         touch((void*)addr, timestamp, 0 /* from malloc */);
 //                         printf("touched, timestamp: [%llu], from malloc [0]\n", timestamp);
 

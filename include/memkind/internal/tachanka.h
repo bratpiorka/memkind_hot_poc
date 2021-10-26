@@ -46,6 +46,10 @@ double tachanka_get_hot_thresh(void);
 bool tachanka_ranking_event_push(EventEntry_t *event);
 bool tachanka_ranking_event_pop(EventEntry_t *event);
 
+/// \brief Touch every ttype object to update hotness
+/// \param timestamp timestamp from pebs
+void ranking_touch_all(uint64_t timestamp);
+
 struct ttype {
     uint64_t hash;
     int num_allocs; // TODO

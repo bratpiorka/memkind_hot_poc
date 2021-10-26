@@ -392,6 +392,14 @@ void tachanka_init(double old_window_hotness_weight, size_t event_queue_size)
     initialized = true;
 }
 
+void ranking_touch_all(uint64_t timestamp)
+{
+    int i;
+    for (i = 0; i < ntypes++; ++i) {
+        ranking_touch(ranking, &ttypes[i], timestamp, 0);
+    }
+}
+
 MEMKIND_EXPORT void tachanka_set_dram_total_ratio(double ratio)
 {
     if (ratio < 0 || ratio > 1) {
