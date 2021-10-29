@@ -21,6 +21,11 @@ ThreadState_t thread_state = THREAD_INIT;
 int pebs_fd;
 static char *pebs_mmap;
 
+#if CHECK_ADDED_SIZE
+extern size_t g_total_ranking_size;
+extern size_t g_total_critnib_size;
+#endif
+
 extern critnib* hash_to_type;
 static size_t g_queue_pop_counter=0;
 static size_t g_queue_counter_malloc=0;
@@ -91,7 +96,9 @@ void *pebs_monitor(void *state)
     pthread_setschedparam(pthread_self(), policy, &param);
 
     __u64 last_head = 0;
+#if PRINT_PEBS_BASIC_INFO
     int cur_tid = syscall(SYS_gettid);
+#endif
 
     // DEBUG
 #if PEBS_LOG_TO_FILE
@@ -149,8 +156,6 @@ void *pebs_monitor(void *state)
         }
 #endif
 
-
-
         EventEntry_t event;
         bool pop_success;
         while (true) {
@@ -159,6 +164,7 @@ void *pebs_monitor(void *state)
                 break;
             switch (event.type) {
                 case EVENT_CREATE_ADD: {
+                    //log_info("EVENT_CREATE_ADD");
                     EventDataCreateAdd *data = &event.data.createAddData;
                     register_block(data->hash, data->address, data->size);
                     register_block_in_ranking(data->address, data->size);
@@ -166,17 +172,17 @@ void *pebs_monitor(void *state)
                     break;
                 }
                 case EVENT_DESTROY_REMOVE: {
+                    //log_info("EVENT_DESTROY_REMOVE");
                     EventDataDestroyRemove *data = &event.data.destroyRemoveData;
                     // REMOVE THE BLOCK FROM RANKING!!!
                     // TODO remove all the exclamation marks and clean up once this is done
-                    unregister_block_from_ranking(data->address);
                     unregister_block(data->address);
                     g_queue_counter_free++;
                     break;
                 }
                 case EVENT_REALLOC: {
+                    //log_info("EVENT_REALLOC");
                     EventDataRealloc *data = &event.data.reallocData;
-                    unregister_block_from_ranking(data->addressOld);
                     unregister_block(data->addressOld);
 //                     realloc_block(data->addressOld, data->addressNew, data->sizeNew);
                     register_block(0u /* FIXME hash should not be zero !!! */, data->addressNew, data->sizeNew);
@@ -192,18 +198,23 @@ void *pebs_monitor(void *state)
                     g_queue_counter_callback++;
                     break;
                 }
+                /*
                 case EVENT_TOUCH: {
+                    int fromMalloc = 0; // false
                     EventDataTouch *data = &event.data.touchData;
-                    touch(data->address, data->timestamp, 0 /*called from malloc*/);
+                    touch(data->address, data->timestamp, fromMalloc);
                     g_queue_counter_touch++;
                     break;
-                }
+                }*/
                 default: {
                     log_fatal("PEBS: event queue - case not implemented!");
                     exit(-1);
                 }
             }
             g_queue_pop_counter++;
+            
+        //log_info("EVENT end g_total_ranking_size %ld g_total_critnib_size %ld", g_total_ranking_size, g_total_critnib_size);
+    
         }
         struct perf_event_mmap_page* pebs_metadata =
             (struct perf_event_mmap_page*)pebs_mmap;

@@ -21,6 +21,10 @@ extern "C" {
 
 #define abs(x) ((x) >= 0 ? (x) : -(x))
 
+#if CHECK_ADDED_SIZE
+extern size_t g_total_ranking_size;
+#endif
+
 // TODO extern ttypes cannot stay like that!!!
 // this should be fixed once custom allocator is created
 extern struct ttype *ttypes;
@@ -351,7 +355,6 @@ void ranking_add_internal(ranking_t *ranking, double hotness, size_t size)
         value = (AggregatedHotness_t *)slab_alloc_malloc(&ranking->aggHotAlloc);
         value->quantifiedHotness = ranking_quantify_hotness(hotness);
         value->size = size;
-        //         printf("wre: hotness not found, adds\n");
     }
     if (value->size > 0)
         wre_put(ranking->entries, value, value->size);
@@ -428,10 +431,15 @@ static size_t ranking_remove_internal_relaxed(ranking_t *ranking, const struct t
 void ranking_remove_internal(ranking_t *ranking, double hotness, size_t size)
 {
     if (size == 0u) // nothing to do
+    {        
+        log_info("ranking_remove_internal size == 0");
         return;
+    }
+
     AggregatedHotness temp;
     // only hotness matters for lookup
     temp.quantifiedHotness = ranking_quantify_hotness(hotness);
+
 #if CHECK_ADDED_SIZE
     // only for asserts
     size_t temp_size = wre_calculate_total_size(ranking->entries);
@@ -466,6 +474,11 @@ void ranking_remove_internal(ranking_t *ranking, double hotness, size_t size)
 #if CRASH_ON_BLOCK_NOT_FOUND
         assert(false && "dealloc non-allocated block!"); // TODO remove!
         assert(false && "attempt to remove non-existent data!");
+#endif
+
+#if CHECK_ADDED_SIZE
+        log_info("ranking_remove_internal attempt to remove non-existent data! "
+            "g_total_ranking_size %ld", g_total_ranking_size);
 #endif
     }
 #if CHECK_ADDED_SIZE

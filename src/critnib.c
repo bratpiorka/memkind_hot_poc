@@ -51,9 +51,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/mman.h>
+#include "memkind/internal/memkind_memtier.h"
 #include "memkind/internal/memkind_arena.h"
 #include "memkind/internal/critnib.h"
 #include "memkind/internal/bigary.h"
+#include "memkind/internal/tachanka.h"
+#include "memkind/internal/memkind_log.h"
 
 // pmdk-compat
 #include <stdatomic.h>
@@ -61,6 +64,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+
+#if CHECK_ADDED_SIZE
+extern size_t g_total_critnib_size;
+#endif
+
+extern struct tblock *tblocks;
+extern critnib *hash_to_type;
+extern critnib *addr_to_block;
 
 typedef pthread_mutex_t os_mutex_t;
 
@@ -335,6 +346,15 @@ critnib_insert(struct critnib *c, int leaf)
 
 		util_mutex_unlock(&c->mutex);
 
+#if CHECK_ADDED_SIZE
+		if (c == addr_to_block){
+			g_total_critnib_size += tblocks[leaf].size;
+
+			log_info("critnib_insert addr_to_block leaf %d size %ld g_total_critnib_size %ld",
+			  leaf, tblocks[leaf].size, g_total_critnib_size);
+		}
+#endif
+
 		return 0;
 	}
 
@@ -353,6 +373,15 @@ critnib_insert(struct critnib *c, int leaf)
 
 		util_mutex_unlock(&c->mutex);
 
+#if CHECK_ADDED_SIZE
+		if (c == addr_to_block){
+			g_total_critnib_size += tblocks[leaf].size;
+			
+			log_info("critnib_insert addr_to_block leaf %d size %ld g_total_critnib_size %ld ",  
+				leaf, tblocks[leaf].size, g_total_critnib_size);
+		}
+#endif
+
 		return 0;
 	}
 
@@ -370,7 +399,6 @@ critnib_insert(struct critnib *c, int leaf)
 	cn_t m = alloc_node(c);
 	if (!m) {
 		util_mutex_unlock(&c->mutex);
-
 		return ENOMEM;
 	}
 	//VALGRIND_HG_DRD_DISABLE_CHECKING(m, sizeof(struct critnib_node));
@@ -385,6 +413,15 @@ critnib_insert(struct critnib *c, int leaf)
 	store_ind(parent, m);
 
 	util_mutex_unlock(&c->mutex);
+
+#if CHECK_ADDED_SIZE
+	if (c == addr_to_block){
+    	g_total_critnib_size += tblocks[leaf].size;
+		
+		log_info("critnib_insert addr_to_block leaf %d size %ld g_total_critnib_size %ld ",
+			leaf,  tblocks[leaf].size, g_total_critnib_size);
+	}
+#endif
 
 	return 0;
 }
@@ -457,10 +494,25 @@ critnib_remove(struct critnib *c, uint64_t key)
 	c->pending_del_nodes[del] = n;
 
 del_leaf:
+
+#if CHECK_ADDED_SIZE
+	if (c == addr_to_block) {
+		g_total_critnib_size -= tblocks[k].size;
+
+		log_info("critnib_remove k %ld key %p addr_to_block %ld g_total_critnib_size %ld ", 
+			k, (void*)key, tblocks[k].size, g_total_critnib_size);
+	}
+#endif
+
 	util_mutex_unlock(&c->mutex);
 	return k;
 
 not_found:
+#if CHECK_ADDED_SIZE
+	log_info("critnib_remove key %p NOT FOUND g_total_critnib_size %ld ", 
+			(void*)key, g_total_critnib_size);
+#endif
+
 	util_mutex_unlock(&c->mutex);
 	return -1;
 }
