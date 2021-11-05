@@ -38,6 +38,8 @@
 #include <sys/mman.h>
 #include <sys/param.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <threads.h>
 
 // clang-format off
 #ifdef MEMKIND_ENABLE_HEAP_MANAGER
@@ -71,6 +73,8 @@
 extern struct memkind_ops MEMKIND_HBW_GBTLB_OPS;
 extern struct memkind_ops MEMKIND_HBW_PREFERRED_GBTLB_OPS;
 extern struct memkind_ops MEMKIND_GBTLB_OPS;
+
+thread_local bool dont_mmap;
 
 static struct memkind MEMKIND_DEFAULT_STATIC = {
     .ops = &MEMKIND_DEFAULT_OPS,
@@ -746,6 +750,9 @@ MEMKIND_EXPORT size_t memkind_malloc_usable_size(struct memkind *kind,
 
 MEMKIND_EXPORT void *memkind_malloc(struct memkind *kind, size_t size)
 {
+    // prevent recursive mmap
+    dont_mmap = true;
+
 #ifdef MEMKIND_DECORATION_ENABLED
     if (memkind_malloc_pre) {
         memkind_malloc_pre(&kind, &size);
@@ -760,12 +767,16 @@ MEMKIND_EXPORT void *memkind_malloc(struct memkind *kind, size_t size)
     }
 #endif
 
+    dont_mmap = false;
     return result;
 }
 
 MEMKIND_EXPORT void *memkind_calloc(struct memkind *kind, size_t num,
                                     size_t size)
 {
+    // prevent recursive mmap
+    dont_mmap = true;
+
 #ifdef MEMKIND_DECORATION_ENABLED
     if (memkind_calloc_pre) {
         memkind_calloc_pre(&kind, &num, &size);
@@ -780,12 +791,15 @@ MEMKIND_EXPORT void *memkind_calloc(struct memkind *kind, size_t num,
     }
 #endif
 
+    dont_mmap = false;
     return result;
 }
 
 MEMKIND_EXPORT int memkind_posix_memalign(struct memkind *kind, void **memptr,
                                           size_t alignment, size_t size)
 {
+    // prevent recursive mmap
+    dont_mmap = true;
 #ifdef MEMKIND_DECORATION_ENABLED
     if (memkind_posix_memalign_pre) {
         memkind_posix_memalign_pre(&kind, memptr, &alignment, &size);
@@ -800,6 +814,7 @@ MEMKIND_EXPORT int memkind_posix_memalign(struct memkind *kind, void **memptr,
     }
 #endif
 
+    dont_mmap = false;
     return err;
 }
 
@@ -807,6 +822,8 @@ MEMKIND_EXPORT void *memkind_realloc(struct memkind *kind, void *ptr,
                                      size_t size)
 {
     void *result;
+    // prevent recursive mmap
+    dont_mmap = true;
 
 #ifdef MEMKIND_DECORATION_ENABLED
     if (memkind_realloc_pre) {
@@ -825,12 +842,16 @@ MEMKIND_EXPORT void *memkind_realloc(struct memkind *kind, void *ptr,
         memkind_realloc_post(kind, ptr, size, &result);
     }
 #endif
+    dont_mmap = false;
 
     return result;
 }
 
 MEMKIND_EXPORT void memkind_free(struct memkind *kind, void *ptr)
 {
+    // prevent recursive mmap
+    dont_mmap = true;
+    
 #ifdef MEMKIND_DECORATION_ENABLED
     if (memkind_free_pre) {
         memkind_free_pre(&kind, &ptr);
@@ -847,6 +868,7 @@ MEMKIND_EXPORT void memkind_free(struct memkind *kind, void *ptr)
         memkind_free_post(kind, ptr);
     }
 #endif
+    dont_mmap = false;
 }
 
 MEMKIND_EXPORT struct memkind_config *memkind_config_new(void)
