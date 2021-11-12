@@ -108,7 +108,7 @@ void register_block(uint64_t hash, void *addr, size_t size)
             }
             t = &ttypes[nt];
         }
-#if PRINT_POLICY_LOG_STATISTICS_INFO
+#if PRINT_POLICY_LOG_STATISTICS_INFO && PRINT_POLICY_LOG_DETAILED_TYPE_INFO
         static atomic_uint_fast64_t counter=0;
         counter++;
         log_info("new type created, total types: %lu", counter);
@@ -344,7 +344,9 @@ MEMKIND_EXPORT Hotness_e tachanka_get_hotness_type_hash(uint64_t hash)
             ret = HOTNESS_COLD;
         }
     }
+#if PRINT_POLICY_LOG_DETAILED_TYPE_INFO
     else log_info("not found, hash %lu", hash);
+#endif
 
     return ret;
 }
