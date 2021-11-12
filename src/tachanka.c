@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <stdatomic.h>
 #include <assert.h>
+#include <string.h>
 #include "unistd.h"
 #include <fcntl.h>
 #include <signal.h>
@@ -86,7 +87,9 @@ void register_block(uint64_t hash, void *addr, size_t size)
     if (nt == -1) {
         nt = __sync_fetch_and_add(&ntypes, 1);
         t = &ttypes[nt];
-        bigary_alloc(&ba_ttypes, nt*sizeof(struct ttype));
+        memset(t, 0, sizeof(t[0]));
+
+//         bigary_alloc(&ba_ttypes, nt*sizeof(struct ttype));
         if (nt >= MAXTYPES)
         {
             log_fatal("Too many distinct alloc types");
@@ -105,10 +108,6 @@ void register_block(uint64_t hash, void *addr, size_t size)
             }
             t = &ttypes[nt];
         }
-        t->n1=0u;
-        t->n2=0u;
-        t->touchCb = NULL;
-        t->touchCbArg = NULL;
 #if PRINT_POLICY_LOG_STATISTICS_INFO
         static atomic_uint_fast64_t counter=0;
         counter++;
@@ -401,7 +400,7 @@ MEMKIND_EXPORT void touch(void *addr, __u64 timestamp, int from_malloc)
 //             ranking_add(ranking, bl); // first of all, add
     //         hotness=INIT_MALLOC_HOTNESS; TODO this does not work, for now
         } else {
-            double hotness = 1e10/total_size ;
+            double hotness = 1./total_size ;
             ranking_touch(ranking, t, timestamp, hotness);
         }
     }

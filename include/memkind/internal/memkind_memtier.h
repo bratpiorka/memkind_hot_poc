@@ -301,8 +301,47 @@ extern double old_time_window_hotness_weight;
 #define ASSURE_RANKING_DELIVERY 0
 #define OFFLOAD_RANKING_OPS_TO_BACKGROUD_THREAD 0
 
-#define TOTAL_COUNTER_POLICY 0 // might be set to 1 for debugging purposes
+// ENUM-LIKE #defs
+#define HOTNESS_POLICY_TOTAL_COUNTER 0
+#define HOTNESS_POLICY_TIME_WINDOW 1
+#define HOTNESS_POLICY_EXPONENTIAL_COEFFS 2
+// might be set to 1 for debugging purposes
 
+static const double EXPONENTIAL_COEFFS_VALS[] = { 0.9, 0.99, 0.999, 0.9999};
+// static const double EXPONENTIAL_COEFFS_VALS[] = { 0.9, 0.99};
+// static const double EXPONENTIAL_COEFFS_VALS[] = { 0.99, 0.99, 0.99, 0.99};
+
+#define EXPONENTIAL_COEFFS_NUMBER \
+    ((sizeof(EXPONENTIAL_COEFFS_VALS)/(sizeof(EXPONENTIAL_COEFFS_VALS[0]))))
+
+/// Precalculated coeffs;
+/// delta_hotness_value = touch_hotness*compensation coeff
+/// Goal: to compensate for longer "retention" times
+///
+/// Formulae (in python):
+///
+/// def calculate_t10(c):
+///    return -1/np.log10(c)
+///
+/// def calculate_compensation_coeffs(coeffs):
+///     compensations=[]
+///     for coeff in coeffs:
+///         compensations.append(1/calculate_t10(coeff))
+///     return compensations
+///
+/// compensation coeff:
+///     1/T_10; T10 is the time after which value decreases by 90%
+///
+/// only relative compensation coeff values are relavent,
+/// all coeffs can be multiplied by any arbitrary value, in this case:
+///     21.854345326782836
+static const double
+EXPONENTIAL_COEFFS_CONMPENSATION_COEFFS[EXPONENTIAL_COEFFS_NUMBER] = {
+    1.00000000e+0, 9.53899645e-02, 9.49597036e-03, 9.49169617e-04};
+//     1.00000000e+02, 9.53899645e+00};
+
+
+#define HOTNESS_POLICY HOTNESS_POLICY_EXPONENTIAL_COEFFS
 
 #if QUANTIFICATION_ENABLED
 typedef int quantified_hotness_t;
