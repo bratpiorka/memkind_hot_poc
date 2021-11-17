@@ -275,9 +275,9 @@ memtier_policy_static_ratio_get_kind(struct memtier_memory *memory,
     size_t size_tier, size_0;
     int i;
     int dest_tier = 0;
-    memkind_atomic_get(g_alloc_size[cfg[0].kind->partition], size_0);
+    size_0 = memtier_kind_allocated_size(cfg[0].kind);
     for (i = 1; i < memory->cfg_size; ++i) {
-        memkind_atomic_get(g_alloc_size[cfg[i].kind->partition], size_tier);
+        size_tier = memtier_kind_allocated_size(cfg[i].kind);
         if ((size_tier * cfg[i].kind_ratio) < size_0) {
             dest_tier = i;
         }
