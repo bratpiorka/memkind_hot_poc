@@ -7,6 +7,7 @@
 #include <memkind/internal/memkind_memtier.h>
 #include <memkind/internal/pebs.h>
 #include <memkind/internal/tachanka.h>
+#include <memkind/internal/numus.h>
 
 #include "config.h"
 #include <assert.h>
@@ -504,6 +505,10 @@ static void print_memtier_memory(struct memtier_memory *memory)
     log_info("Threshold counter current value %u", memory->thres_check_cnt);
     log_info("Hot tier ID %d", memory->hot_tier_id);
     log_info("Cold tier ID %d", memory->cold_tier_id);
+
+    char buf[16384];
+    stringify_numamem(buf, sizeof(buf));
+    log_info("Global per-numa node usage in KB: %s", buf);
 }
 
 static void print_memory_statistics(struct memtier_memory *memory) {

@@ -3,14 +3,11 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include "memkind/internal/numus.h"
 
-#define MAX_NODES 1024 /* kernel max */
-// If this struct is made dynamic, it'll be numa_num_possible_nodes() long.
-static struct {
-    size_t used;
-} numamem[MAX_NODES];
+static struct numamem numamem[MAX_NODES];
 
-static bool gather_numamem()
+bool gather_numamem(void)
 {
     FILE *f = fopen("/proc/self/numa_maps", "r");
     if (!f)
@@ -79,4 +76,18 @@ skip_mapping:
     }
     fclose(f);
     return true;
+}
+
+void stringify_numamem(char *buf, int bufsize)
+{
+    if (!gather_numamem()) {
+        snprintf(buf, bufsize, "Couldn't grab numa usage data.\n");
+        return;
+    }
+
+    for (int i = 0; i < MAX_NODES && bufsize > 0; i++) {
+        int len = snprintf(buf, bufsize, " %zu", numamem[i].used / 1024);
+        bufsize -= len;
+        buf += len;
+    }
 }
