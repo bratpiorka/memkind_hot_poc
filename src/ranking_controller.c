@@ -64,6 +64,13 @@ ranking_controller_calculate_fixed_thresh(ranking_controller *controller,
         e*controller->proportional
         + controller->integrated_error * controller->integral;
     double new_inv_thresh = a+ steering_signal;
+    
+    // restrict to values in a closed range <0,1>
+    if (new_inv_thresh > 1.0)
+        new_inv_thresh = 1.0;
+    else if (new_inv_thresh < 0)
+        new_inv_thresh = 0.0;
+    
     double out = 1.0 - new_inv_thresh;
 
     return out;
