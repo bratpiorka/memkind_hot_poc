@@ -98,9 +98,8 @@ static int destructed;
 
 static struct memtier_memory *current_memory;
 
-void *(*real_mmap)(void *, size_t, int, int, int, off_t);
-int (*real_munmap)(void *, size_t);
-static bool init = false;
+void *sys_mmap(void *, size_t, int, int, int, off_t);
+int sys_munmap(void *, size_t);
 
 // only used for few initial m/callocs that calls mmap 
 static thread_local unsigned char bytes[100000];
@@ -110,33 +109,8 @@ static thread_local void* mmap_map[1000];
 static thread_local int num_mmaps = 0;
 extern thread_local bool dont_mmap;
 
-void do_init()
-{
-    if (init) 
-        return;
-    init = true;
-
-    real_mmap = (void * (*)(void *, size_t, int, int, int, off_t))dlsym(
-        RTLD_NEXT , "mmap");
-    real_munmap = (int (*)(void *, size_t))dlsym(RTLD_NEXT , "munmap");
-    log_err("real_mmap %p", real_mmap);
-    log_err("real_munmap %p", real_munmap);
-
-    init = false;
-}
-
 MEMTIER_EXPORT void *malloc(size_t size)
 {
-    // TODO!!!
-    if (real_mmap == 0)
-    {
-        do_init();
-        void* ret = (void*)&bytes[last_byte];
-        last_byte += size;
-        
-        return ret;
-    }
-
     if (MEMTIER_LIKELY(current_memory)) {
         return memtier_malloc(current_memory, size);
     } else if (destructed == 0) {
@@ -147,15 +121,6 @@ MEMTIER_EXPORT void *malloc(size_t size)
 
 MEMTIER_EXPORT void *calloc(size_t num, size_t size)
 {
-    // TODO!!!
-    if (real_mmap == 0)
-    {
-        do_init();
-        void* ret = (void*)&bytes[last_byte];
-        last_byte += size;
-        return ret;
-    }
-
     if (MEMTIER_LIKELY(current_memory)) {
         return memtier_calloc(current_memory, num, size);
     } else if (destructed == 0) {
@@ -169,7 +134,6 @@ MEMTIER_EXPORT void *realloc(void *ptr, size_t size)
     // TODO!!!
     if ((ptr >= (void*)bytes) && ptr < (void*)(bytes + last_byte))
     {
-        do_init();
         void* ret = (void*)&bytes[last_byte];
         last_byte += size;
         return ret;
@@ -219,10 +183,6 @@ MEMTIER_EXPORT size_t malloc_usable_size(void *ptr)
 
 MEMTIER_EXPORT void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 {
-    if (!real_mmap) {
-        do_init();
-    }
-
     // TODO tweaked for MLC - find other valid flag combinations
     if ((current_memory == 0) || (
         (addr == NULL) &&
@@ -235,18 +195,14 @@ MEMTIER_EXPORT void *mmap(void *addr, size_t length, int prot, int flags, int fd
         mmap_map[num_mmaps] = addr;
         num_mmaps++;
 
-        return memtier_mmap((void*)real_mmap, current_memory, addr, length, prot, flags, fd, offset);
+        return memtier_mmap(current_memory, addr, length, prot, flags, fd, offset);
     }
 
-    return real_mmap(addr, length, prot, flags, fd, offset);
+    return sys_mmap(addr, length, prot, flags, fd, offset);
 }
 
 MEMTIER_EXPORT int munmap(void *addr, size_t length)
 {
-    if (!real_mmap) {
-        do_init();
-    }
-
     int i;
     for(i = 0; i < num_mmaps; i++)
     {
@@ -257,7 +213,7 @@ MEMTIER_EXPORT int munmap(void *addr, size_t length)
         }
     }
 
-    return real_munmap(addr, length);
+    return sys_munmap(addr, length);
 }
 
 static pthread_once_t init_once = PTHREAD_ONCE_INIT;

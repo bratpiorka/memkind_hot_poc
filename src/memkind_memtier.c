@@ -1203,17 +1203,35 @@ MEMKIND_EXPORT void *memtier_malloc(struct memtier_memory *memory, size_t size)
     return ptr;
 }
 
+void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t off)
+{
+    long ret = syscall(SYS_mmap, addr, length, prot, flags, fd, off);
+    if (ret == -EPERM && !off && (flags&MAP_ANON) && !(flags&MAP_FIXED))
+        ret = -ENOMEM;
+    if (ret > -4096 && ret < 0) {
+        errno = -ret;
+        return MAP_FAILED;
+    }
+
+    return (void*)ret;
+}
+
+int munmap(void *addr, size_t length)
+{
+    long ret = syscall(SYS_munmap, addr, length);
+    if (!ret)
+        return 0;
+    errno = -ret;
+    return -1;
+}
+
 #include <pthread.h>
 pthread_mutex_t mutex;
 
-MEMKIND_EXPORT void* memtier_mmap(void* real_mmap_ptr, struct memtier_memory *memory, void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+MEMKIND_EXPORT void* memtier_mmap(struct memtier_memory *memory, void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 {
-    if ((memory == NULL) || dont_mmap) {
-        void *(*real_mmap)(void *, size_t, int, int, int, off_t) 
-            = (void* (*)(void *, size_t, int, int, int, off_t))real_mmap_ptr;
-        //log_err("dont mmap!");    
-        return real_mmap(addr, length, prot, flags, fd, offset);
-    }
+    if ((memory == NULL) || dont_mmap)
+        return sys_mmap(addr, length, prot, flags, fd, offset);
 
     // prevent recursive mmap
     dont_mmap = true;
