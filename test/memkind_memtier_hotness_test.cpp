@@ -271,6 +271,7 @@ INSTANTIATE_TEST_CASE_P(numObjsParam, MemkindMemtierHotnessTest,
 
 TEST_F(MemkindMemtierHotnessTest, check_ranking_touch_all) {
     const int MALLOC_COUNT = 5;
+    double freqs[MALLOC_COUNT];
     __u64 hotness_measure_window = 1000000000; // equals to the hotness_measure_window defined in pebs_init()
     __u64 wait_time = hotness_measure_window + 1;
     std::vector<void *> malloc_vec;
@@ -288,45 +289,54 @@ TEST_F(MemkindMemtierHotnessTest, check_ranking_touch_all) {
         malloc_vec.push_back(ptr);
     }
 
-    
+
     sleep(1); // wait for pebs_monitor() to register new types from memtier_mallocs
 
 #if HOTNESS_POLICY == HOTNESS_POLICY_TIME_WINDOW
+    TimestampState_t timestamp_states[MALLOC_COUNT];
+
+    tachanka_get_timestamp_state(timestamp_states, MALLOC_COUNT);
     for (size_t i = 0; i < MALLOC_COUNT; ++i) {
-        ASSERT_EQ(tachanka_get_timestamp_state(i), TIMESTAMP_NOT_SET);
+        ASSERT_EQ(timestamp_states[i], TIMESTAMP_NOT_SET);
     }
     tachanka_ranking_touch_all(wait_time, 0); // set timestamp state to TIMESTAMP_INIT
+    tachanka_get_frequency(freqs, MALLOC_COUNT);
+    tachanka_get_timestamp_state(timestamp_states, MALLOC_COUNT);
     for (size_t i = 0; i < MALLOC_COUNT; ++i) {
-        ASSERT_EQ(tachanka_get_frequency(i), 0);
+        ASSERT_EQ(freqs[i], 0);
     }
     for (size_t i = 0; i < MALLOC_COUNT; ++i) {
-        ASSERT_EQ(tachanka_get_timestamp_state(i), TIMESTAMP_INIT);
+        ASSERT_EQ(timestamp_states[i], TIMESTAMP_INIT);
     }
 
     tachanka_ranking_touch_all(2 * wait_time, 1e6); // set timestamp state to TIMESTAMP_INIT_DONE, set f to non-zero value
+    tachanka_get_frequency(freqs, MALLOC_COUNT);
+    tachanka_get_timestamp_state(timestamp_states, MALLOC_COUNT);
     for (size_t i = 0; i < MALLOC_COUNT; ++i) {
-        ASSERT_EQ(tachanka_get_frequency(i), 0);
+        ASSERT_EQ(freqs[i], 0);
     }
     for (size_t i = 0; i < MALLOC_COUNT; ++i) {
-        ASSERT_EQ(tachanka_get_timestamp_state(i), TIMESTAMP_INIT_DONE);
+        ASSERT_EQ(timestamp_states[i], TIMESTAMP_INIT_DONE);
     }
 
     tachanka_ranking_touch_all(3 * wait_time, 0);  // touch all ttypes without adding the hotness
+    tachanka_get_frequency(freqs, MALLOC_COUNT);
     for (size_t i = 0; i < MALLOC_COUNT; ++i) {
-        ASSERT_GT(tachanka_get_frequency(i), 0);
+        ASSERT_GT(freqs[i], 0);
     }
 #elif HOTNESS_POLICY == HOTNESS_POLICY_EXPONENTIAL_COEFFS
-    double freqs[MALLOC_COUNT];
+    double updated_freqs[MALLOC_COUNT];
 
     tachanka_ranking_touch_all(wait_time, 1e6); // set f to non-zero value
+    tachanka_get_frequency(freqs, MALLOC_COUNT);
     for (size_t i = 0; i < MALLOC_COUNT; ++i) {
-        freqs[i] = tachanka_get_frequency(i);
         ASSERT_GT(freqs[i], 0);
     }
 
     tachanka_ranking_touch_all(2 * wait_time, 0);  // touch all ttypes without adding the hotness
+    tachanka_get_frequency(updated_freqs, MALLOC_COUNT);
     for (size_t i = 0; i < MALLOC_COUNT; ++i) {
-        ASSERT_LT(tachanka_get_frequency(i), freqs[i]);
+        ASSERT_LT(updated_freqs[i], freqs[i]);
     }
 #endif
 
