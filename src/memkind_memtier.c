@@ -44,6 +44,8 @@
     static atomic_size_t g_failed_adds_free=0;
 #endif
 
+extern thread_local bool dont_mmap;
+
 // clang-format off
 #if defined(MEMKIND_ATOMIC_C11_SUPPORT)
 #define memkind_atomic_increment(counter, val)                                 \
@@ -284,6 +286,7 @@ memtier_policy_static_ratio_get_kind(struct memtier_memory *memory,
             dest_tier = i;
         }
     }
+    //log_info("kind: %d", dest_tier);
     return cfg[dest_tier].kind;
 }
 
@@ -1188,12 +1191,61 @@ MEMKIND_EXPORT void *memtier_malloc(struct memtier_memory *memory, size_t size)
     void *ptr;
     uint64_t data;
 
-    ptr = memtier_kind_malloc(memory->get_kind(memory, size, &data), size);
+    dont_mmap = true;
+    memkind_t kind = memory->get_kind(memory, size, &data);
+    ptr = memtier_kind_malloc(kind, size);
     memory->post_alloc(data, ptr, size);
     memory->update_cfg(memory);
     print_memory_statistics(memory);
 
+    dont_mmap = false;
     return ptr;
+}
+
+void *sys_mmap(void *addr, size_t length, int prot, int flags, int fd, off_t off)
+{
+    long ret = syscall(SYS_mmap, addr, length, prot, flags, fd, off);
+    if (ret == -EPERM && !off && (flags&MAP_ANON) && !(flags&MAP_FIXED))
+        ret = -ENOMEM;
+    if (ret > -4096 && ret < 0) {
+        errno = -ret;
+        return MAP_FAILED;
+    }
+
+    return (void*)ret;
+}
+
+int munmap(void *addr, size_t length)
+{
+    long ret = syscall(SYS_munmap, addr, length);
+    if (!ret)
+        return 0;
+    errno = -ret;
+    return -1;
+}
+
+#include <pthread.h>
+pthread_mutex_t mutex;
+
+MEMKIND_EXPORT void* memtier_mmap(struct memtier_memory *memory, void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+{
+    if ((memory == NULL) || dont_mmap)
+        return sys_mmap(addr, length, prot, flags, fd, offset);
+
+    // prevent recursive mmap
+    dont_mmap = true;
+    
+    pthread_mutex_lock(&mutex);
+    void* ret = memtier_malloc(memory, length);
+    pthread_mutex_unlock(&mutex);
+    
+    dont_mmap = false;
+    return ret;
+}
+
+MEMKIND_EXPORT void memtier_munmap(void* ptr)
+{
+    memtier_free(ptr);
 }
 
 MEMKIND_EXPORT void *memtier_kind_malloc(memkind_t kind, size_t size)
@@ -1240,11 +1292,14 @@ MEMKIND_EXPORT void *memtier_calloc(struct memtier_memory *memory, size_t num,
     void *ptr;
     uint64_t data;
 
+    // prevent recursive mmap
+    dont_mmap = true;
     ptr = memtier_kind_calloc(memory->get_kind(memory, size, &data), num, size);
     memory->post_alloc(data, ptr, size);
     memory->update_cfg(memory);
     print_memory_statistics(memory);
 
+    dont_mmap = false;
     return ptr;
 }
 
@@ -1264,6 +1319,9 @@ MEMKIND_EXPORT void *memtier_kind_calloc(memkind_t kind, size_t num,
 MEMKIND_EXPORT void *memtier_realloc(struct memtier_memory *memory, void *ptr,
                                      size_t size)
 {
+    // prevent recursive mmap
+    dont_mmap = true;
+
     // reallocate inside same kind
     if (ptr) {
         struct memkind *kind = memkind_detect_kind(ptr);
@@ -1273,13 +1331,16 @@ MEMKIND_EXPORT void *memtier_realloc(struct memtier_memory *memory, void *ptr,
         if (size!=0)
             print_memory_statistics(memory);
         // NOTE: new ptr == NULL if size == 0
+        dont_mmap = false;
         return ptr;
     }
 
     if (size == 0) {
+        dont_mmap = false;
         return NULL;
     }
 
+    dont_mmap = false;
     return memtier_malloc(memory, size);
 }
 
@@ -1406,12 +1467,16 @@ MEMKIND_EXPORT int memtier_posix_memalign(struct memtier_memory *memory,
                                           void **memptr, size_t alignment,
                                           size_t size)
 {
+    // prevent recursive mmap
+    dont_mmap = true;
+    
     uint64_t data = 0;
     int ret = memtier_kind_posix_memalign(memory->get_kind(memory, size, &data),
                                           memptr, alignment, size);
     memory->post_alloc(data, *memptr, size);
     memory->update_cfg(memory);
 
+    dont_mmap = false;
     return ret;
 }
 
@@ -1419,12 +1484,14 @@ MEMKIND_EXPORT int memtier_kind_posix_memalign(memkind_t kind, void **memptr,
                                                size_t alignment, size_t size)
 {
     // TODO: hotness
+    dont_mmap = true;
     int res = memkind_posix_memalign(kind, memptr, alignment, size);
     increment_alloc_size(kind->partition, jemk_malloc_usable_size(*memptr));
 #ifdef MEMKIND_DECORATION_ENABLED
     if (memtier_kind_posix_memalign_post)
         memtier_kind_posix_memalign_post(kind, memptr, alignment, size, &res);
 #endif
+    dont_mmap = false;
     return res;
 }
 

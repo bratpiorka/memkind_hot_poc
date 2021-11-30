@@ -11,6 +11,19 @@
 #include <pthread.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <sys/mman.h>
+
+#include <pthread.h>
+#include <threads.h>
+#include <execinfo.h>
+
+#ifdef HAVE_STDATOMIC_H
+#include <stdatomic.h>
+#define MEMKIND_ATOMIC _Atomic
+#else
+#define MEMKIND_ATOMIC
+#endif
+
 
 #define MEMTIER_EXPORT __attribute__((visibility("default")))
 #define MEMTIER_INIT   __attribute__((constructor))
@@ -85,6 +98,17 @@ static int destructed;
 
 static struct memtier_memory *current_memory;
 
+void *sys_mmap(void *, size_t, int, int, int, off_t);
+int sys_munmap(void *, size_t);
+
+// only used for few initial m/callocs that calls mmap 
+static thread_local unsigned char bytes[100000];
+static thread_local size_t last_byte = 0;
+
+static thread_local void* mmap_map[1000];
+static thread_local int num_mmaps = 0;
+extern thread_local bool dont_mmap;
+
 MEMTIER_EXPORT void *malloc(size_t size)
 {
     if (MEMTIER_LIKELY(current_memory)) {
@@ -107,6 +131,14 @@ MEMTIER_EXPORT void *calloc(size_t num, size_t size)
 
 MEMTIER_EXPORT void *realloc(void *ptr, size_t size)
 {
+    // TODO!!!
+    if ((ptr >= (void*)bytes) && ptr < (void*)(bytes + last_byte))
+    {
+        void* ret = (void*)&bytes[last_byte];
+        last_byte += size;
+        return ret;
+    }
+
     if (MEMTIER_LIKELY(current_memory)) {
         return memtier_realloc(current_memory, ptr, size);
     } else if (destructed == 0) {
@@ -131,6 +163,12 @@ MEMTIER_EXPORT int posix_memalign(void **memptr, size_t alignment, size_t size)
 
 MEMTIER_EXPORT void free(void *ptr)
 {
+    // TODO!!!
+    if ((ptr >= (void*)bytes) && ptr < (void*)(bytes + last_byte)) {
+        // ignore
+        return;
+    }
+
     if (MEMTIER_LIKELY(current_memory)) {
         memtier_realloc(current_memory, ptr, 0);
     } else if (destructed == 0) {
@@ -141,6 +179,41 @@ MEMTIER_EXPORT void free(void *ptr)
 MEMTIER_EXPORT size_t malloc_usable_size(void *ptr)
 {
     return memtier_usable_size(ptr);
+}
+
+MEMTIER_EXPORT void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+{
+    // TODO tweaked for MLC - find other valid flag combinations
+    if ((current_memory == 0) || (
+        (addr == NULL) &&
+        (prot == (PROT_READ | PROT_WRITE)) && 
+        (flags == (MAP_ANONYMOUS | MAP_PRIVATE)))) 
+    {
+        //log_err("mmap: start:%p, length:%lu, prot:%d, flags:%d, fd:%d, offset:%ld", 
+        //    addr, length, prot, flags, fd, offset);
+
+        mmap_map[num_mmaps] = addr;
+        num_mmaps++;
+
+        return memtier_mmap(current_memory, addr, length, prot, flags, fd, offset);
+    }
+
+    return sys_mmap(addr, length, prot, flags, fd, offset);
+}
+
+MEMTIER_EXPORT int munmap(void *addr, size_t length)
+{
+    int i;
+    for(i = 0; i < num_mmaps; i++)
+    {
+        if (mmap_map[i] == addr) {
+            //log_err("munmap: start:%p, length:%lu", addr, length);
+            memtier_munmap(addr);
+            return 0;
+        }
+    }
+
+    return sys_munmap(addr, length);
 }
 
 static pthread_once_t init_once = PTHREAD_ONCE_INIT;
