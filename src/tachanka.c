@@ -579,26 +579,64 @@ MEMKIND_EXPORT bool tachanka_ranking_event_pop(EventEntry_t *event)
     return ranking_event_pop(&ranking_event_buff, event);
 }
 
-MEMKIND_EXPORT void tachanka_ranking_touch_all(__u64 timestamp, double add_hotness)
-{
-    // TODO re-implement this function
-    // add API for getting specific element from slab_allocator
-    // and re-implement it
-//     for (int i = 0; i < ntypes; ++i) {
-//         ranking_touch(ranking, &ttypes[i], timestamp, add_hotness);
-//     }
+struct touch_data {
+    __u64 timestamp;
+    double add_hotness;
+};
+
+static int tachanka_ranking_touch_all_internal(uintptr_t key, void *value, void *privdata) {
+    uint64_t timestamp = ((struct touch_data *)privdata)->timestamp;
+    double add_hotness = ((struct touch_data *)privdata)->add_hotness;
+    ranking_touch(ranking, (struct ttype *)value, timestamp, add_hotness);
+    return 0;
 }
 
-// Getter used in the tachanka_check_ranking_touch_all test
-MEMKIND_EXPORT double tachanka_get_frequency(size_t index) {
-    // TODO: re-implement (add API in slab_allocator first!)
-//     return ttypes[index].f;
+MEMKIND_EXPORT void tachanka_ranking_touch_all(__u64 timestamp, double add_hotness)
+{
+    struct touch_data privdata = {timestamp, add_hotness};
+    critnib_iter(hash_to_type, 0, -1, *tachanka_ranking_touch_all_internal, &privdata);
+}
+
+struct frequencies {
+    double *freq;
+    size_t size;
+};
+
+static int tachanka_get_frequency_internal(uintptr_t key, void *value, void *freqs) {
+    static size_t i = 0;
+    *(((struct frequencies *)freqs)->freq + i) = ((struct ttype *)value)->f;
+    i++;
+    if (i == ((struct frequencies *)freqs)->size) {
+        i = 0;
+    }
     return 0;
 }
 
 // Getter used in the tachanka_check_ranking_touch_all test
-MEMKIND_EXPORT TimestampState_t tachanka_get_timestamp_state(size_t index) {
-    // TODO: re-implement (add API in slab_allocator first!)
-//     return ttypes[index].timestamp_state;
+MEMKIND_EXPORT void *tachanka_get_frequency(double *freqs, size_t size) {
+    struct frequencies frequencies = {freqs, size};
+    critnib_iter(hash_to_type, 0, -1, *tachanka_get_frequency_internal, &frequencies);
+    return 0;
+}
+
+struct timestamps {
+    TimestampState_t *timestamp;
+    size_t size;
+};
+
+static int tachanka_get_timestamp_state_internal(uintptr_t key, void *value, void *ts) {
+    static size_t i = 0;
+    *(((struct timestamps *)ts)->timestamp + i) = ((struct ttype *)value)->timestamp_state;
+    i++;
+    if (i == ((struct timestamps *)ts)->size) {
+        i = 0;
+    }
+    return 0;
+}
+
+// Getter used in the tachanka_check_ranking_touch_all test
+MEMKIND_EXPORT void *tachanka_get_timestamp_state(TimestampState_t *timestamps, size_t size) {
+    struct timestamps ts = {timestamps, size};
+    critnib_iter(hash_to_type, 0, -1, *tachanka_get_timestamp_state_internal, &ts);
     return 0;
 }

@@ -52,12 +52,14 @@ bool tachanka_ranking_event_pop(EventEntry_t *event);
 void tachanka_ranking_touch_all(__u64 timestamp, double add_hotness);
 
 /// \brief Getter for type's frequency
-/// \param index index of a type in ttypes list 
-double tachanka_get_frequency(size_t index);
+/// \param freq pointer to save frequencies
+/// \param size number of different types
+void *tachanka_get_frequency(double *freqs, size_t size);
 
 /// \brief Getter for type's timestamp state
-/// \param index index of a type in ttypes list
-TimestampState_t tachanka_get_timestamp_state(size_t index);
+/// \param timestamp pointer to save timestamps
+/// \param size number of different types
+void *tachanka_get_timestamp_state(TimestampState_t *timestamp, size_t size);
 
 struct ttype {
     uint64_t hash;
