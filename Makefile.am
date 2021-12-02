@@ -41,6 +41,7 @@ libmemkind_la_SOURCES = src/hbwmalloc.c \
                         src/slab_allocator.c \
                         src/ranking_controller.c \
                         src/heatmap.cpp \
+                        src/numus.c \
                         # end
 
 
