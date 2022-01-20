@@ -118,11 +118,9 @@ public:
 #define TEST_ACCESS_SEQ_CPY 2
 #define TEST_ACCESS_SEQ_INC 3
 
-// #define TEST_ACCESS TEST_ACCESS_RANDOM_INC
-#define TEST_ACCESS TEST_ACCESS_SEQ_INC
+#define TEST_ACCESS TEST_ACCESS_RANDOM
 
-
-#define IS_TEST_ACCESS_RANDOM ((TEST_ACCESS == TEST_ACCESS_RANDOM_INC) \
+#define IS_TEST_ACCESS_RANDOM ((TEST_ACCESS == TEST_ACCESS_RANDOM) \
                                 || (TEST_ACCESS == TEST_ACCESS_RANDOM_INC))
 /// @warning: API is not thread safe, only one function per instance
 /// should be called at once
@@ -133,7 +131,7 @@ class Loader  {
     std::mt19937 generator;
 #endif
 
-    std::shared_ptr<void> data1; //, data2;
+    std::shared_ptr<void> data1, data2;
     size_t dataSize;
     size_t iterations;
     size_t i=0;
@@ -181,13 +179,13 @@ class Loader  {
 
 public:
     Loader(std::shared_ptr<void> data1,
-           /*std::shared_ptr<void> data2, */size_t data_size,
+           std::shared_ptr<void> data2, size_t data_size,
            size_t iterations) :
 #if IS_TEST_ACCESS_RANDOM
           generator(dev()),
 #endif
           data1(data1),
-//           data2(data2),
+          data2(data2),
           dataSize(data_size),
           iterations(iterations),
           shouldContinue(false) {}
@@ -224,7 +222,7 @@ static std::shared_ptr<memtier_memory> create_memory(memtier_policy_t policy,
         memtier_builder_new(policy);
     memtier_builder_add_tier(m_tier_builder, MEMKIND_DEFAULT, 1);
     memtier_builder_add_tier(m_tier_builder,
-                                MEMKIND_REGULAR,
+                                MEMKIND_DAX_KMEM,
                                 pmem_dram_ratio);
     auto memory =
         std::shared_ptr<memtier_memory>(
@@ -249,16 +247,16 @@ public:
 
     std::shared_ptr<Loader> CreateLoader() {
         void *allocated_memory1 = memtier_malloc(memory.get(), size);
-//         void *allocated_memory2 = memtier_malloc(memory.get(), size);
+        void *allocated_memory2 = memtier_malloc(memory.get(), size);
         assert(allocated_memory1 && "memtier malloc failed");
-//         assert(allocated_memory2 && "memtier malloc failed");
+        assert(allocated_memory2 && "memtier malloc failed");
         std::shared_ptr<void> allocated_memory_ptr1(allocated_memory1,
                                                     memtier_free);
-//         std::shared_ptr<void> allocated_memory_ptr2(allocated_memory2,
-//                                                     memtier_free);
+        std::shared_ptr<void> allocated_memory_ptr2(allocated_memory2,
+                                                    memtier_free);
 
         return std::make_shared<Loader>(
-            allocated_memory_ptr1, /*allocated_memory_ptr2,*/ size, iterations);
+            allocated_memory_ptr1, allocated_memory_ptr2, size, iterations);
     }
 };
 
@@ -334,6 +332,7 @@ create_loader_creators (size_t minSize,
         probability_sum += probability;
         // TODO total_iterations*probability has no effect, requires debugging
         size_t iterations = (size_t)(total_iterations*probability);
+        std::cout << "Type iterations:" << iterations << std::endl;
         creators.push_back(LoaderCreator(size, iterations, memory));
     }
     assert(abs(probability_sum-1.0) < 0.0001 && "probabilities do not sum to 100% !");
@@ -480,191 +479,4 @@ static void naive_matrix_multiply(int matrix_size, int mul_step,
 
 
     return;
-}
-
-static void matmul() {
-
-    struct memtier_builder *m_builder;
-    struct memtier_memory *m_tier_memory;
-    {
-        m_tier_memory = nullptr;
-        m_builder = memtier_builder_new(MEMTIER_POLICY_DATA_HOTNESS);
-    }
-
-    const int MATRIX_SIZE = 512;
-    const int MUL_STEP = 5;
-    int OBJS_NUM = 3;
-
-    // objects will be reallocated after N uses
-    const int AGE_THRESHOLD = 10;
-    const int LOOP_LEN = 1;
-//     const int LOOP_LEN = 20 * OBJS_NUM;
-    // start iteration of hotness validation
-    const int LOOP_CHECK_START = 5 * OBJS_NUM;
-    // compare sum of hotness between objects from DEPTH num of checks
-    const int LOOP_CHECK_DEPTH = 10;
-    // get object hotness every FREQ iterations
-    const int LOOP_CHECK_FREQ = 10;
-
-    int it, it2;
-
-    // setup only DRAM tier
-    int res = memtier_builder_add_tier(m_builder, MEMKIND_DEFAULT, 1);
-//     ASSERT_EQ(0, res);
-    // currently, adding only one tier is not supported
-    // workaround: add two tiers, both dram
-    res = memtier_builder_add_tier(m_builder, MEMKIND_REGULAR, 1);
-//     ASSERT_EQ(0, res);
-    m_tier_memory = memtier_builder_construct_memtier_memory(m_builder);
-//     ASSERT_NE(nullptr, m_tier_memory);
-
-    int mat_size = sizeof(double) * MATRIX_SIZE * MATRIX_SIZE;
-
-    float accum_hotness[OBJS_NUM][LOOP_LEN] = {0};
-    for (it = 0; it < OBJS_NUM; it++)
-        for (it2 = 0; it2 < LOOP_LEN; it2++)
-            accum_hotness[it][it2]=0;
-
-    double** objs = (double**)memtier_malloc(m_tier_memory, OBJS_NUM * sizeof(double*));
-    for (it = 0; it < OBJS_NUM; it++) {
-        objs[it] = 0;
-    }
-
-    // fill frequency array using zipf distribution
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    zipf_distribution<> zipf(OBJS_NUM);
-    const int FREQ_ARRAY_LEN = LOOP_LEN;
-    int freq[LOOP_LEN];
-    for (it = 0; it < LOOP_LEN; it++) {
-        freq[it] = zipf(gen) - 1;
-    }
-
-    // set age of each object to AGE_THRESHOLD to reallocate it immediately
-    int ages[OBJS_NUM];
-    for (it = 0; it < OBJS_NUM; it++) {
-        ages[it] = AGE_THRESHOLD;
-    }
-
-    int sel = 0;
-    int ready_to_validate = 0;
-    int check_freq = 0;
-	for (it = 0; it < LOOP_LEN; it++) {
-
-        // select src1, src2 and dest objects
-        sel++;
-        sel = sel % FREQ_ARRAY_LEN;
-
-        int dest_obj_id = freq[sel];
-        double* dest_obj = objs[dest_obj_id];
-
-        // each object has an age - if it goes above AGE_THRESHOLD
-        // object is reallocated
-        ages[dest_obj_id]++;
-        if (ages[dest_obj_id] > AGE_THRESHOLD) {
-            ages[dest_obj_id] = 0;
-
-            memtier_free(dest_obj);
-            objs[dest_obj_id] = (double*)memtier_malloc(m_tier_memory,
-                mat_size + dest_obj_id * sizeof(double));
-            dest_obj = objs[dest_obj_id];
-//             ASSERT_NE(nullptr, dest_obj);
-
-            // DEBUG
-            //printf("remalloc %d, start %llx, end %llx\n", dest_obj_id,
-            //    (long long unsigned int)(&objs[dest_obj_id][0]),
-            //    (long long unsigned int)(&objs[dest_obj_id][MATRIX_SIZE * MATRIX_SIZE - 1]));
-        }
-
-// 	    naive_matrix_multiply(MATRIX_SIZE, MUL_STEP,
-//             dest_obj, dest_obj, dest_obj);
-//         for (size_t j=0; j<1000; ++j)
-//             for (size_t i=0; i< MATRIX_SIZE*MATRIX_SIZE; i += CACHE_LINE_SIZE_U64)
-//                 dest_obj[i] ++;
-
-        Loader loader(std::shared_ptr<void>(dest_obj, [](void* addr){
-            (void) addr;
-        }), MATRIX_SIZE*MATRIX_SIZE, 100000);
-        auto fence = std::make_shared<Fence>();
-        std::thread([m_tier_memory, mat_size](){
-            double *ndest_obj = (double*)memtier_malloc(m_tier_memory,
-                MATRIX_SIZE*MATRIX_SIZE );
-            Loader internal_loader(std::shared_ptr<void>(ndest_obj, [](void* addr){
-                (void) addr;
-            }), MATRIX_SIZE*MATRIX_SIZE, 100000);
-            internal_loader.GenerateAccessOnce();
-            memtier_free(ndest_obj);
-        }).join();
-//         loader.PrepareOnce(fence);
-//         std::this_thread::sleep_for(std::chrono::seconds(15));
-//         sleep(5);
-//         fence->Start();
-//         loader.CollectResults();
-//         loader.GenerateAccessOnce();
-
-        if (ready_to_validate == 0) {
-            int num_allocated_objs = 0;
-            for (int it2 = 0; it2 < OBJS_NUM; it2++) {
-                if (objs[it2] != NULL)
-                num_allocated_objs++;
-            }
-
-            if (num_allocated_objs == OBJS_NUM) {
-                for (int it2 = 0; it2 < OBJS_NUM; it2++) {
-                    accum_hotness[it2][it] = tachanka_get_obj_hotness(mat_size + it2 * sizeof(double));
-                }
-
-                if (it > LOOP_CHECK_START) {
-                    ready_to_validate = 1;
-                }
-            }
-        } else {
-            check_freq ++;
-            if (check_freq < LOOP_CHECK_FREQ)
-                continue;
-
-            check_freq = 0;
-            for (int it2 = 1; it2 < OBJS_NUM; it2++) {
-                float h0 = 0, h1 = 0;
-                for (size_t it3 = 0; it3 < LOOP_CHECK_DEPTH; it3++) {
-                    h0 += accum_hotness[it2 - 1][it - it3];
-                    h1 += accum_hotness[it2][it - it3];
-                }
-//                 ASSERT_GE(h0, h1);
-            }
-        }
-
-        // DEBUG
-        //printf("dst %d\n", dest_obj_id);
-        //fflush(stdout);
-
-        // TODO check object hotness
-        //
-        // How the check for hotness should look like:
-        //  1) sort all objects/types by their frequency
-        //  2) calculate sum of all sizes
-        //  3) hand-calculate which objects should be cold and which ones hot
-        //  4) make a check in two loops: first loop for hot, second loop for cold
-        //
-        // Possible issues:
-        //  1) pebs thread has not done its work; mitigation:
-        //      a) wait (race condition-based mitigation)
-        //      b) explicitly call pebs thread
-        //  2) general race condition with pebs:
-        //      i) cases:
-        //          a) not enough: see point 1,
-        //          b) too many times: old time window is gone,
-        //          latest has 0 measurements
-        //      ii) mitigation:
-        //          a) explicitly call pebs, without separate thread
-        //
-        // For now, only "quickfix": make a test that's vulnerable to race condition
-	}
-
-    {
-        memtier_builder_delete(m_builder);
-        if (m_tier_memory) {
-            memtier_delete_memtier_memory(m_tier_memory);
-        }
-    }
 }
