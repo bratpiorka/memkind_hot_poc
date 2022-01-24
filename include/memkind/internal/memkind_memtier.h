@@ -233,6 +233,8 @@ double memtier_kind_get_actual_hot_to_total_desired_ratio(void);
 
 size_t memtier_kind_get_total_size(void);
 
+void print_memtier_memory(struct memtier_memory *memory);
+
 // DEBUG
 // float get_obj_hotness(int size);
 
@@ -275,7 +277,7 @@ extern double old_time_window_hotness_weight;
 #define PRINT_PEBS_STATS_ON_COUNTER_OVERFLOW_INFO 0
 #define PRINT_PEBS_NEW_DATA_INFO 0
 #define PRINT_PEBS_TOUCH_INFO 0
-#define PRINT_PEBS_SAMPLES_NUM_INFO 1
+#define PRINT_PEBS_SAMPLES_NUM_INFO 0
 #define PRINT_PEBS_EVENT_INFO 0
 
 #define PRINT_CRITNIB_NEW_BLOCK_REGISTERED_INFO 0
@@ -297,7 +299,7 @@ extern double old_time_window_hotness_weight;
 
 #define PRINT_MEMDUMP_INTERVAL 15
 #define PRINT_RATIO_ADJUSTED_INTERVAL 100
-#define PRINT_TOUCH_STATISTICS_INTERVAL 100
+#define PRINT_TOUCH_STATISTICS_INTERVAL 10
 #define CRASH_ON_BLOCK_NOT_FOUND 0
 #define PRINT_POLICY_BACKTRACE_INFO 0
 #define PRINT_POLICY_CREATE_MEMORY_INFO 1

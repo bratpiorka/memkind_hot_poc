@@ -118,7 +118,7 @@ public:
 #define TEST_ACCESS_SEQ_CPY 2
 #define TEST_ACCESS_SEQ_INC 3
 
-#define TEST_ACCESS TEST_ACCESS_SEQ_INC
+#define TEST_ACCESS TEST_ACCESS_RANDOM_INC
 
 #define IS_TEST_ACCESS_RANDOM ((TEST_ACCESS == TEST_ACCESS_RANDOM) \
                                 || (TEST_ACCESS == TEST_ACCESS_RANDOM_INC))
@@ -258,6 +258,10 @@ public:
         return std::make_shared<Loader>(
             allocated_memory_ptr1, allocated_memory_ptr2, size, iterations);
     }
+
+    memtier_memory *GetMemory() {
+        return memory.get();
+    }
 };
 
 /// @return malloc_time, access_time
@@ -279,6 +283,10 @@ create_and_run_loaders(std::vector<LoaderCreator> &creators) {
     uint64_t summed_access_time_ms = 0u;
     for (auto &loader : loaders) {
         summed_access_time_ms += loader->CollectResults();
+    }
+
+    for (auto &creator : creators) {
+        print_memtier_memory(creator.GetMemory());
     }
 
     return std::make_pair(malloc_time, summed_access_time_ms);

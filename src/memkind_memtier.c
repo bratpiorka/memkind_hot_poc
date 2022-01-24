@@ -475,7 +475,7 @@ memtier_policy_data_hotness_post_alloc(uint64_t hash, void *addr, size_t size,
     // TODO assure that failure can be ignored/handle failure!
 }
 
-static void print_memtier_memory(struct memtier_memory *memory)
+MEMKIND_EXPORT void print_memtier_memory(struct memtier_memory *memory)
 {
     int i;
     if (!memory) {
