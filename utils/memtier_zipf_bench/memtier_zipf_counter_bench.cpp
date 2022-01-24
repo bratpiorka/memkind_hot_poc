@@ -118,7 +118,7 @@ public:
 #define TEST_ACCESS_SEQ_CPY 2
 #define TEST_ACCESS_SEQ_INC 3
 
-#define TEST_ACCESS TEST_ACCESS_RANDOM_INC
+#define TEST_ACCESS TEST_ACCESS_SEQ_INC
 
 #define IS_TEST_ACCESS_RANDOM ((TEST_ACCESS == TEST_ACCESS_RANDOM) \
                                 || (TEST_ACCESS == TEST_ACCESS_RANDOM_INC))
@@ -167,11 +167,9 @@ class Loader  {
                 static_cast<uint64_t*>(data1.get())[index]++;
             }
 #else
-        const size_t data_size_u64 = dataSize/sizeof(uint64_t);
         for (size_t it=0; it<iterations; ++it)
-            for (size_t i=CACHE_LINE_SIZE_U64, pi=0; i<data_size_u64; pi=i, i += CACHE_LINE_SIZE_U64) {
-                static_cast<uint64_t*>(data1.get())[i]
-                    += static_cast<volatile uint64_t*>(data1.get())[pi];
+            for (size_t i=0; i<dataSize/sizeof(uint64_t); i += CACHE_LINE_SIZE_U64) {
+                static_cast<uint64_t*>(data1.get())[i]++;
             }
 #endif
         return clock_bench_time_ms() - timestamp_start;
